@@ -42,7 +42,11 @@ class Application(Base):
     # The patient's name. Required (can't be empty).
     patient_name = Column(String, nullable=False)
 
-    # Phone or email so staff can reach them. Required.
+    # The patient's email address. Required — a separate field from the phone so
+    # we can store and search the two independently. (index speeds up lookups.)
+    email = Column(String, nullable=False, index=True)
+
+    # The patient's phone/contact number. Required.
     contact = Column(String, nullable=False)
 
     # Which trial they're applying to. Just a number for now (nullable).

@@ -23,6 +23,9 @@ class EligibilityAnswerRead(BaseModel):
 # Notice: no id, no status, no created_at — the server fills those in.
 class ApplicationCreate(BaseModel):
     patient_name: str
+    # The patient's email. EmailStr would validate the format, but to avoid a new
+    # dependency we keep it a plain str for now (the frontend uses type="email").
+    email: str
     contact: str
     trial_id: int | None = None
     # A nested list: each item is validated as an EligibilityAnswerCreate.
@@ -34,6 +37,7 @@ class ApplicationCreate(BaseModel):
 class ApplicationRead(BaseModel):
     id: int
     patient_name: str
+    email: str
     contact: str
     trial_id: int | None
     status: str

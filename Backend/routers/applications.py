@@ -37,6 +37,7 @@ def create_application(
     #    in id, status ("new"), and created_at via the model's defaults.
     application = models.Application(
         patient_name=payload.patient_name,
+        email=payload.email,
         contact=payload.contact,
         trial_id=payload.trial_id,
     )
