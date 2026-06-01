@@ -1,0 +1,6 @@
+# Installed packages — restored with `npm install`, never committed.
+node_modules
+# Vite's production build output.
+dist
+# Local logs.
+*.log

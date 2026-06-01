@@ -6,8 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import models
 from database import engine
-# Our applications router (the POST /applications endpoint lives here).
-from routers import applications
+# Our routers: applications (public patient form) and auth (staff login).
+from routers import applications, auth
 
 # Reads every class in models.py and creates the matching tables in app.db
 # (only creates tables that don't already exist — safe to run every startup).
@@ -33,6 +33,9 @@ app.add_middleware(
 # Plug the applications router into the app. Without this line, the routes
 # defined in routers/applications.py would never be served.
 app.include_router(applications.router)
+
+# Plug in the auth router too — this is what serves POST /auth/login and GET /auth/me.
+app.include_router(auth.router)
 
 @app.get("/")
 def home():

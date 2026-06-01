@@ -120,3 +120,92 @@ git push
 ```
 
 `add` stages changes → `commit` saves them locally → `push` sends them online. Do this after finishing a feature or at the end of a session and your work is always safe.
+
+---
+
+### Q: So now we have to do add, commit and push?
+_2026-05-31_
+
+Yes — exactly right, in the order **add → commit → push**. We ran the full loop on the one changed file (`conversation.md`):
+
+| Command | What it did |
+|---|---|
+| `git add .` | Staged the changed file |
+| `git commit -m "Update conversation log"` | Saved it locally as commit `c7dfb10` |
+| `git push` | Sent it to GitHub (`baff8fe..c7dfb10  main -> main`) |
+
+The `LF will be replaced by CRLF` message is a harmless Windows line-ending note.
+
+That's the entire backup loop you'll use from now on. Note: each chat updates `conversation.md`, which itself becomes a new change to push — so push whenever `git status` shows changes you want backed up. Pushing often (many small commits) is perfectly fine and actually a good habit.
+
+---
+
+### Q: According to the current status of my project, the folder `stitch_crp_pro_ui_design_spec` — can I use this folder for my project in working condition?
+_2026-06-02_
+
+**What that folder actually is**
+
+`Frontend/stitch_crp_pro_ui_design_spec/` is a set of **design mockups** (from Stitch, Google's UI-design tool). For each screen it has `code.html` (a standalone HTML page) and `screen.png` (a picture of how it should look). Plus `clinical_trust_protocol/DESIGN.md`, which is the design system: exact colors, fonts (Inter), spacing, and component rules. Screens covered: `patient_application_form`, `staff_login`, `staff_dashboard_shell`, `admin_dashboard`, `nurse_dashboard`.
+
+**Can you use this folder as your working project? — Not directly.** Three reasons, all visible in the files:
+
+1. **They're plain HTML, not React.** Your real app is React components (`App.jsx`, `PatientForm.jsx`, etc.). The mockups are static `.html` files with no React, no state, no connection to FastAPI — they look right but do nothing.
+2. **They use Tailwind via a CDN `<script>`** (line 7 of `patient_application_form/code.html`). Your React project does NOT have Tailwind installed — `package.json` only lists `react`, `react-dom`, `vite`. Your components use inline `style={{...}}` instead.
+3. **They also pull Material Symbols icons and Google Fonts** from the internet — more things your React app isn't set up for.
+
+So the folder is a **reference/spec, not a drop-in**. It's the blueprint; `src/` is the actual house you're building.
+
+**How you do use it:**
+
+- **Path A — match the design by hand (recommended for learning).** Keep your working React + backend wiring as-is, and restyle it using `DESIGN.md` as the rulebook (teal `#00626a` primary, Inter font, 8px rounded corners). The form keeps working; it just starts looking like the mockup.
+- **Path B — adopt Tailwind, then port the HTML into JSX.** Properly install Tailwind in Vite (not the CDN), copy the color config from `DESIGN.md`, then translate each `code.html` into a JSX component — re-adding the React state and backend calls yourself, since the HTML has none.
+
+**Bottom line:** the folder is safe and useful, but it's a design spec to copy *from*, not a working frontend you can switch *to*. Your live app stays the React code in `Frontend/src/`.
+
+---
+
+### Q: What would be the strategy [for using the design mockups in the working project]?
+_2026-06-02_
+
+**What's wired vs. not (this decides the order).** The backend has exactly three working endpoints today (`main.py`, `routers/auth.py`):
+- `POST /applications` → feeds `patient_application_form` (fully functional)
+- `POST /auth/login` → feeds `staff_login` (fully functional)
+- `GET /auth/me` → "who am I", supports the dashboard shell header
+
+There is NO endpoint yet to list applications, approve eligibility, refer, create trials, or manage accounts. So the three dashboards (`staff_dashboard_shell`, `admin_dashboard`, `nurse_dashboard`) have no data to show — building them now gives empty shells. That drives the order.
+
+**The strategy — foundation first, then screen-by-screen in "wired" order:**
+
+- **Step 0 — Decide styling approach (one-time fork).** Mockups are 100% Tailwind. Either adopt Tailwind (copy HTML almost verbatim) or hand-translate every class. Recommended: adopt Tailwind. **→ User chose: Adopt Tailwind.**
+- **Step 1 — Build the foundation once:** install Tailwind into Vite (not the CDN script); copy color palette + Inter font + spacing from `clinical_trust_protocol/DESIGN.md` into the Tailwind config; add Inter + Material Symbols links to `index.html`. Done on screen #1, reused by all later screens.
+- **Step 2 — Port screens in order of what works:**
+  1. `patient_application_form` first — backend works, React state + `createApplication()` already in `PatientForm.jsx`. Restyle the working component.
+  2. `staff_login` — `login()` already works in `api.js`.
+  3. `staff_dashboard_shell` — sidebar layout; likely outgrow the 2-button toggle in `App.jsx` and want react-router. Build shell with placeholder content.
+  4. `admin_dashboard` / `nurse_dashboard` last — build their backend endpoints FIRST, then style; otherwise decorating empty pages.
+- **Step 3 — Per-screen recipe:** open `screen.png` + `code.html` side by side → copy HTML markup into the JSX component → re-attach React parts (useState, onChange, onSubmit, api.js call — the most-skipped step) → compare to `screen.png`, fix with `DESIGN.md` → test it submits to backend → commit.
+
+**Golden rule:** style your *working* components — never replace them with the static HTML. The HTML has the looks; your `src/` files have the brains (state + backend calls). Add looks to brains, not the reverse.
+
+---
+
+### Q: Is there a need to make a skill for this [the UI mockup → React styling work]?
+_2026-06-02_
+
+**Short answer: no, you don't need a new skill.**
+
+**You already have the skill that covers it.** Restyling a React component to match a mockup is implementation work — your build workflow already has `/implement` for exactly that. Porting `PatientForm.jsx` is just `/implement patient-form-ui`, then `/review`, then `/test`. A new skill would overlap with `/implement`.
+
+**When a skill IS worth making (all three must be true):**
+1. The task repeats many times.
+2. It has project-specific steps/gotchas you'd otherwise re-explain every time.
+3. An existing skill doesn't already cover it.
+
+Applied here:
+- Tailwind setup (Step 1) — one time only → fails the "repeats" test → not skill-worthy.
+- Per-screen port recipe — repeats ~5 screens, has real gotchas (re-attach React state, compare to screen.png, "style brains don't replace them") → borderline, but still just `/implement` with a checklist.
+- Overall styling effort — already covered by `/implement`.
+
+**Recommendation:** skip the new skill for now. Use `/implement` per screen, and put the per-screen recipe + golden rule as a short "How we port a mockup screen" note in `CLAUDE.md` (or the design folder's `DESIGN.md`) where it'll be read. Consistency without the authoring/maintenance overhead — which matters while still learning the basics.
+
+**Revisit later if** you keep re-explaining the porting steps every screen, or the recipe grows complex (per-trial questions, shared layout components, routing conventions). Turning the CLAUDE.md note into a real skill then is easy.

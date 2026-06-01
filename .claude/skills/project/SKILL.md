@@ -1,59 +1,41 @@
 ---
 name: project
-description: Load full context for the Clinical Trial Platform — architecture, tech stack, roles, current build state, and how to help. Invoke when chatting about this project so the architecture never has to be re-explained.
+description: Load full context for the current repository — what it is, its stack, structure, and current build state — by reading the repo's own docs and source. Invoke at the start of a working session so the architecture never has to be re-explained.
 ---
 
-# Clinical Trial Platform — Project Context
+# Project Context Loader
 
-When this skill runs, you are picking up work on **CRP-Pro**, a web app that
-connects patients to clinical trials. Load the context below so the user never
-has to re-explain the architecture, stack, or where things stand.
+When this skill runs, build an accurate picture of the repository you are working
+in by reading its actual files — never rely on memory or a stale summary. The
+goal is to load enough context that the user doesn't have to re-explain the
+architecture, stack, or where things stand.
 
-## What it is
-Patients fill a public application + eligibility questionnaire. Staff move them
-through role-based dashboards: review → approve → refer → follow up.
+## What to read (in priority order, whatever exists)
+1. **Instruction / convention files** — `CLAUDE.md`, `AGENTS.md`, `.cursorrules`,
+   `CONTRIBUTING.md`. These override defaults; follow them exactly.
+2. **Overview docs** — `README.md`, `docs/`, any architecture or design doc, and
+   any roadmap/plan file (e.g. `*PLAN*.md`, `ROADMAP.md`, `TODO.md`). A roadmap,
+   if present, is the source of truth for what to build next.
+3. **Manifests** — `package.json`, `pyproject.toml`, `requirements.txt`,
+   `go.mod`, `Cargo.toml`, etc. — to learn the stack, scripts, and dependencies.
+4. **Entry points & structure** — the main app entry, the top-level source dirs,
+   and how the pieces are wired together.
+5. **Git state** — recent commits and `git status` to see what's in flight.
 
-## Roles
-- **Patient** — public, no login. Submits application + eligibility questionnaire.
-- **Coordinator** — reviews applications, approves eligibility, refers to a hospital.
-- **Nurse/Staff** — follows up with referred patients, can create trials.
-- **Admin** — manages coordinator/nurse accounts, oversees dashboards, launches trials.
+## What to produce
+A short, accurate briefing:
+- **What it is** — one or two sentences on the project's purpose.
+- **Stack** — languages, frameworks, datastore, build tooling (from manifests).
+- **Structure** — the top-level layout and where the important code lives.
+- **Current state** — which features/phases are done vs. in progress vs. not
+  started, grounded in the code and git history (not assumptions).
+- **How to run it** — the actual commands from the manifests/docs.
 
-## Architecture
-```
-[ React (Vite) SPA ]  --HTTP/JSON-->  [ FastAPI ]  -->  [ SQLAlchemy ORM ]  -->  [ SQLite ]
-   Patient form                          REST API          models.py            app.db
-   Staff dashboards                      Auth + RBAC                          (Postgres later)
-```
-- **Backend**: FastAPI (Python), SQLAlchemy ORM, SQLite now / PostgreSQL later. Lives in `/Backend`.
-- **Frontend**: React + Vite. Lives in `/Frontend` (not built yet).
+## Rules
+- Ground every claim in a file you read; cite `file:line` where useful.
+- If a doc contradicts the code, trust the code and say so.
+- Don't guess at unstated intent — note open questions instead.
 
-## Key files (read these for ground truth — do not trust this summary blindly)
-- `CLAUDE.md` — project instructions and conventions.
-- `SDLC_PLAN.md` — the full phased roadmap. **The source of truth for what to build next.**
-- `Backend/database.py` — SQLAlchemy engine, session, Base.
-- `Backend/models.py` — table definitions.
-- `Backend/main.py` — app entry; creates tables on startup.
-
-## Current build state (update this as the project moves)
-- Phase 0 (setup): done — FastAPI runs, DB engine wired, Vite not yet scaffolded.
-- Phase 1 (data layer): in progress — `User` model done and table created;
-  `Application` model is the immediate next task.
-- Everything from Phase 2 on (patient form, auth, dashboards) is not started.
-
-## How to run the backend
-`cd Backend`, activate the venv, then `uvicorn main:app --reload`.
-
-## How to help (IMPORTANT — the user is learning)
-The user is a beginner learning FastAPI and React. Per `CLAUDE.md`:
-- **Explain concepts and review their code.** Help them understand, don't write
-  the whole project for them.
-- When introducing a new file or model, explain it line by line.
-- Prefer giving them a spec + hints to practice, then review what they write.
-- Work phase by phase per `SDLC_PLAN.md`; don't jump ahead.
-- Commit at the end of each phase with a clear message (git is initialized).
-
-## At the start of a /project chat
-1. Briefly confirm the current phase/state (re-read `SDLC_PLAN.md` and the
-   `Backend/` files if unsure — they are authoritative over this summary).
-2. Ask what they want to work on, or suggest the next step from the roadmap.
+## At the start of a session
+1. Briefly confirm the current state from the files above.
+2. Ask what the user wants to work on, or suggest the next step from the roadmap.

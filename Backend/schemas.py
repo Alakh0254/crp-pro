@@ -47,3 +47,28 @@ class ApplicationRead(BaseModel):
 
     # Lets Pydantic read data straight from a SQLAlchemy model object.
     model_config = ConfigDict(from_attributes=True)
+
+
+# OUTPUT: what POST /auth/login sends back after a successful login.
+# This shape ("access_token" + "token_type") is the OAuth2 standard, which is
+# what makes the /docs "Authorize" button understand the response automatically.
+class Token(BaseModel):
+    access_token: str
+    # Always the string "bearer" — it tells the client to send the token back as
+    # "Authorization: Bearer <token>". Defaulted so the route doesn't set it each time.
+    token_type: str = "bearer"
+
+
+# OUTPUT: a safe view of a user. Notice there is NO hashed_password field — by
+# leaving it out, the API physically cannot leak the password hash. This is the
+# same Create/Read split idea as ApplicationRead (we just don't need a UserCreate
+# this phase, because the seed script creates users directly).
+class UserRead(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+    is_active: bool
+
+    # Lets Pydantic read straight from a User ORM object (user.id, user.name, ...).
+    model_config = ConfigDict(from_attributes=True)

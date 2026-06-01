@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CRP-Pro Admin Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        [data-weight="fill"] {
+            font-variation-settings: 'FILL' 1;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC; /* Level 0 Background */
+        }
+        .modal-overlay {
+            background-color: rgba(19, 27, 46, 0.4);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary": "#ffffff",
+                    "background": "#faf8ff",
+                    "on-primary-fixed": "#001f23",
+                    "primary-fixed-dim": "#7cd4df",
+                    "error": "#ba1a1a",
+                    "surface-bright": "#faf8ff",
+                    "on-primary-fixed-variant": "#004f56",
+                    "surface-container-highest": "#dae2fd",
+                    "surface-container-low": "#f2f3ff",
+                    "secondary": "#0051d5",
+                    "secondary-container": "#316bf3",
+                    "tertiary-fixed-dim": "#d2bbff",
+                    "on-tertiary-fixed-variant": "#5a00c6",
+                    "on-tertiary-container": "#faf2ff",
+                    "primary-fixed": "#98f0fb",
+                    "on-primary-container": "#ddfbff",
+                    "on-primary": "#ffffff",
+                    "on-surface": "#131b2e",
+                    "on-secondary-container": "#fefcff",
+                    "secondary-fixed": "#dbe1ff",
+                    "outline": "#6e797a",
+                    "on-secondary-fixed": "#00174b",
+                    "inverse-primary": "#7cd4df",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#eaddff",
+                    "tertiary": "#6c23dd",
+                    "surface-container-high": "#e2e7ff",
+                    "on-secondary-fixed-variant": "#003ea8",
+                    "surface-variant": "#dae2fd",
+                    "on-error-container": "#93000a",
+                    "surface-tint": "#006972",
+                    "surface": "#faf8ff",
+                    "surface-container": "#eaedff",
+                    "on-background": "#131b2e",
+                    "on-error": "#ffffff",
+                    "primary-container": "#0e7c86",
+                    "tertiary-container": "#8646f7",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed-dim": "#b4c5ff",
+                    "inverse-on-surface": "#eef0ff",
+                    "on-tertiary-fixed": "#25005a",
+                    "surface-dim": "#d2d9f4",
+                    "on-surface-variant": "#3e494a",
+                    "inverse-surface": "#283044",
+                    "outline-variant": "#bdc9ca",
+                    "surface-container-lowest": "#ffffff",
+                    "primary": "#00626a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "lg": "24px",
+                    "margin-desktop": "32px",
+                    "xs": "4px",
+                    "max-width-content": "1280px",
+                    "xl": "32px",
+                    "sm": "8px",
+                    "base": "4px",
+                    "margin-mobile": "16px",
+                    "md": "16px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body class="bg-background text-on-background selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Desktop Sidebar Shell -->
+<aside class="fixed left-0 top-0 h-screen w-[280px] bg-surface-container-low border-r border-outline-variant flex flex-col p-md space-y-sm z-50">
+<div class="mb-lg px-2">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container" data-icon="clinical_notes">clinical_notes</span>
+</div>
+<div>
+<h1 class="font-display-lg text-primary text-[24px] leading-tight">CRP-Pro</h1>
+<p class="font-label-sm text-on-surface-variant">Clinical Excellence</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md group-hover:translate-x-1 duration-200">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-md group-hover:translate-x-1 duration-200">Patients</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined" data-icon="biotech">biotech</span>
+<span class="font-label-md group-hover:translate-x-1 duration-200">Clinical Trials</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+<span class="font-label-md group-hover:translate-x-1 duration-200">Data Management</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-secondary-container text-on-secondary-container rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md group-hover:translate-x-1 duration-200">Settings</span>
+</a>
+</nav>
+<div class="pt-4 border-t border-outline-variant space-y-1">
+<button class="w-full flex items-center justify-center gap-2 bg-primary text-on-primary py-2.5 rounded-xl font-label-md hover:brightness-90 transition-all active:scale-95">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+                New Trial
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all mt-4" href="#">
+<span class="material-symbols-outlined" data-icon="contact_support">contact_support</span>
+<span class="font-label-md">Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-label-md">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-[280px] min-h-screen">
+<!-- Top App Bar -->
+<header class="h-16 bg-surface flex items-center justify-between px-xl sticky top-0 z-40 border-b border-outline-variant shadow-sm">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-full py-2 pl-10 pr-4 text-label-md focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search trials, patients, or staff..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<button class="p-2 text-primary hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-primary hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<div class="h-8 w-px bg-outline-variant mx-2"></div>
+<div class="flex items-center gap-3 cursor-pointer group">
+<div class="text-right">
+<p class="font-label-md text-on-surface leading-none">Dr. Sarah Chen</p>
+<p class="text-[11px] text-on-surface-variant uppercase tracking-wider font-semibold">Admin</p>
+</div>
+<img alt="User avatar" class="w-9 h-9 rounded-full object-cover border border-outline-variant" data-alt="A professional headshot of a middle-aged female clinical researcher with a confident, warm expression. She is wearing a clean white medical coat in a bright, modern clinic environment with soft, diffused daylight. The image has a high-end, clean aesthetic with a shallow depth of field, highlighting her professional role in the healthcare industry." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmA8eky7PSYwPRS0YmbE2RPY64fI_YPPOFziTF3gJXVDiHhvQBCGP9lfpJpHPJTdweh789v7cDlXuZ7g-O2iH4bVXtPWD8CPAY1Vm-OExF6If75K1GAqjbi-dbj0OmzsUZm9Ofc93KQUAyGQhXR1LtJc68TBmy-nglS52m-WL5VvIbjFiCVzLn7S5l5rAaHHxkGQ7xq7Liu6Df9C7e4N7mkjyVQbwTG-p_MhKAxjkMmdSZ3uKUUtO77_Afu1nBVupA4QAKVpmpES8"/>
+</div>
+</div>
+</header>
+<div class="p-xl space-y-xl max-w-[1400px] mx-auto">
+<!-- Summary Stats -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-lg">
+<div class="bg-surface p-md rounded-xl shadow-[0_4px_12px_rgba(15,23,42,0.05)] border border-outline-variant flex items-center justify-between group hover:border-primary/30 transition-all cursor-default">
+<div>
+<p class="font-label-sm text-on-surface-variant mb-1">Total Applications</p>
+<h3 class="font-display-lg text-on-surface">128</h3>
+</div>
+<div class="w-12 h-12 bg-primary-container/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary" data-icon="description">description</span>
+</div>
+</div>
+<div class="bg-surface p-md rounded-xl shadow-[0_4px_12px_rgba(15,23,42,0.05)] border border-outline-variant flex items-center justify-between group hover:border-primary/30 transition-all cursor-default">
+<div>
+<p class="font-label-sm text-on-surface-variant mb-1">Referrals</p>
+<h3 class="font-display-lg text-on-surface">14</h3>
+</div>
+<div class="w-12 h-12 bg-secondary-container/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-secondary" data-icon="share">share</span>
+</div>
+</div>
+<div class="bg-surface p-md rounded-xl shadow-[0_4px_12px_rgba(15,23,42,0.05)] border border-outline-variant flex items-center justify-between group hover:border-primary/30 transition-all cursor-default">
+<div>
+<p class="font-label-sm text-on-surface-variant mb-1">Active Trials</p>
+<h3 class="font-display-lg text-on-surface">6</h3>
+</div>
+<div class="w-12 h-12 bg-tertiary-container/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-tertiary" data-icon="clinical_notes">clinical_notes</span>
+</div>
+</div>
+<div class="bg-surface p-md rounded-xl shadow-[0_4px_12px_rgba(15,23,42,0.05)] border border-outline-variant flex items-center justify-between group hover:border-primary/30 transition-all cursor-default">
+<div>
+<p class="font-label-sm text-on-surface-variant mb-1">Global Staff</p>
+<h3 class="font-display-lg text-on-surface">9</h3>
+</div>
+<div class="w-12 h-12 bg-on-surface-variant/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="badge">badge</span>
+</div>
+</div>
+</section>
+<!-- Staff Accounts Section -->
+<section class="bg-surface rounded-xl shadow-[0_4px_12px_rgba(15,23,42,0.05)] border border-outline-variant overflow-hidden">
+<div class="p-lg flex items-center justify-between border-b border-outline-variant">
+<div>
+<h2 class="font-headline-md text-on-surface">Staff accounts</h2>
+<p class="font-body-md text-on-surface-variant">Manage clinical staff permissions and access levels.</p>
+</div>
+<button class="flex items-center gap-2 bg-primary text-on-primary px-lg py-2.5 rounded-xl font-label-md hover:brightness-90 transition-all active:scale-95 shadow-md" onclick="openModal()">
+<span class="material-symbols-outlined" data-icon="person_add">person_add</span>
+                        New account
+                    </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="px-lg py-4 font-label-sm text-on-surface-variant uppercase tracking-wider">Name</th>
+<th class="px-lg py-4 font-label-sm text-on-surface-variant uppercase tracking-wider">Email</th>
+<th class="px-lg py-4 font-label-sm text-on-surface-variant uppercase tracking-wider">Role</th>
+<th class="px-lg py-4 font-label-sm text-on-surface-variant uppercase tracking-wider text-center">Active</th>
+<th class="px-lg py-4 font-label-sm text-on-surface-variant uppercase tracking-wider text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/50">
+<!-- Staff Member 1 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-lg py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary font-bold text-xs">EJ</div>
+<span class="font-label-md text-on-surface">Elena Jenson</span>
+</div>
+</td>
+<td class="px-lg py-4 font-body-md text-on-surface-variant">e.jenson@clinicaltrust.org</td>
+<td class="px-lg py-4">
+<span class="px-3 py-1 bg-primary-container/10 text-primary-container rounded-full text-[12px] font-bold border border-primary-container/20">Coordinator</span>
+</td>
+<td class="px-lg py-4">
+<div class="flex justify-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</td>
+<td class="px-lg py-4 text-right">
+<button class="text-error font-label-sm hover:underline transition-all">Disable</button>
+</td>
+</tr>
+<!-- Staff Member 2 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-lg py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-tertiary-container/20 flex items-center justify-center text-tertiary font-bold text-xs">MR</div>
+<span class="font-label-md text-on-surface">Marcus Rivera</span>
+</div>
+</td>
+<td class="px-lg py-4 font-body-md text-on-surface-variant">m.rivera@clinicaltrust.org</td>
+<td class="px-lg py-4">
+<span class="px-3 py-1 bg-secondary-container/10 text-secondary-container rounded-full text-[12px] font-bold border border-secondary-container/20">Nurse</span>
+</td>
+<td class="px-lg py-4">
+<div class="flex justify-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</td>
+<td class="px-lg py-4 text-right">
+<button class="text-error font-label-sm hover:underline transition-all">Disable</button>
+</td>
+</tr>
+<!-- Staff Member 3 -->
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-lg py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-on-surface-variant/10 flex items-center justify-center text-on-surface-variant font-bold text-xs">AK</div>
+<span class="font-label-md text-on-surface">Amina Khan</span>
+</div>
+</td>
+<td class="px-lg py-4 font-body-md text-on-surface-variant">a.khan@clinicaltrust.org</td>
+<td class="px-lg py-4">
+<span class="px-3 py-1 bg-primary-container/10 text-primary-container rounded-full text-[12px] font-bold border border-primary-container/20">Coordinator</span>
+</td>
+<td class="px-lg py-4">
+<div class="flex justify-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</td>
+<td class="px-lg py-4 text-right">
+<button class="text-on-surface-variant/40 font-label-sm" disabled="">Enabled</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Bottom Dashboard Row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-lg">
+<!-- Activity Graph Placeholder -->
+<div class="bg-surface rounded-xl border border-outline-variant p-lg shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline-sm text-on-surface">Trial Enrollment Trend</h3>
+<select class="bg-transparent border-none font-label-md text-primary cursor-pointer focus:ring-0">
+<option>Last 30 Days</option>
+<option>Last 6 Months</option>
+</select>
+</div>
+<div class="h-48 w-full bg-surface-container-low rounded-lg relative overflow-hidden flex items-end px-4 gap-2">
+<!-- Abstract Data Bars -->
+<div class="w-full bg-primary-container/40 rounded-t-sm h-[30%]"></div>
+<div class="w-full bg-primary-container/60 rounded-t-sm h-[45%]"></div>
+<div class="w-full bg-primary-container/80 rounded-t-sm h-[60%]"></div>
+<div class="w-full bg-primary rounded-t-sm h-[85%]"></div>
+<div class="w-full bg-primary-container/70 rounded-t-sm h-[55%]"></div>
+<div class="w-full bg-primary-container/50 rounded-t-sm h-[40%]"></div>
+<div class="w-full bg-primary-container/90 rounded-t-sm h-[75%]"></div>
+</div>
+</div>
+<!-- Recent Notifications -->
+<div class="bg-surface rounded-xl border border-outline-variant p-lg shadow-sm">
+<h3 class="font-headline-sm text-on-surface mb-4">System Alerts</h3>
+<div class="space-y-4">
+<div class="flex gap-4 items-start p-3 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer">
+<div class="w-2 h-2 mt-2 bg-error rounded-full shrink-0"></div>
+<div>
+<p class="font-label-md text-on-surface">New Adverse Event reported in Trial P-402</p>
+<p class="text-[12px] text-on-surface-variant">10 minutes ago • High Priority</p>
+</div>
+</div>
+<div class="flex gap-4 items-start p-3 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer">
+<div class="w-2 h-2 mt-2 bg-primary rounded-full shrink-0"></div>
+<div>
+<p class="font-label-md text-on-surface">Staff onboarding: Elena Jenson completed HIPAA training</p>
+<p class="text-[12px] text-on-surface-variant">2 hours ago • System Update</p>
+</div>
+</div>
+<div class="flex gap-4 items-start p-3 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer">
+<div class="w-2 h-2 mt-2 bg-secondary rounded-full shrink-0"></div>
+<div>
+<p class="font-label-md text-on-surface">New referral received from St. Jude Medical</p>
+<p class="text-[12px] text-on-surface-variant">5 hours ago • Information</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- New Account Modal Overlay -->
+<div class="fixed inset-0 z-[60] modal-overlay items-center justify-center hidden" id="newAccountModal">
+<div class="bg-surface w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+<div class="p-lg bg-surface border-b border-outline-variant flex justify-between items-center">
+<div>
+<h2 class="font-headline-sm text-on-surface">Create Staff Account</h2>
+<p class="font-label-sm text-on-surface-variant">Authorize new clinical personnel.</p>
+</div>
+<button class="text-on-surface-variant hover:bg-surface-container-high p-2 rounded-full transition-colors" onclick="closeModal()">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<form class="p-lg space-y-lg" onsubmit="event.preventDefault(); closeModal();">
+<div class="space-y-sm">
+<label class="font-label-md text-on-surface-variant block">Full Name</label>
+<input class="w-full bg-surface-container-lowest border border-outline rounded-xl py-2.5 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" placeholder="e.g. John Doe" required="" type="text"/>
+</div>
+<div class="space-y-sm">
+<label class="font-label-md text-on-surface-variant block">Email Address</label>
+<input class="w-full bg-surface-container-lowest border border-outline rounded-xl py-2.5 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" placeholder="j.doe@clinicaltrust.org" required="" type="email"/>
+</div>
+<div class="grid grid-cols-2 gap-md">
+<div class="space-y-sm">
+<label class="font-label-md text-on-surface-variant block">Role</label>
+<select class="w-full bg-surface-container-lowest border border-outline rounded-xl py-2.5 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all cursor-pointer">
+<option>Coordinator</option>
+<option>Nurse</option>
+<option>Physician</option>
+<option>Admin</option>
+</select>
+</div>
+<div class="space-y-sm">
+<label class="font-label-md text-on-surface-variant block">Temporary Password</label>
+<input class="w-full bg-surface-container-low border border-outline rounded-xl py-2.5 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" type="password" value="********"/>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl flex items-start gap-3 border border-outline-variant/50">
+<span class="material-symbols-outlined text-primary text-[20px] mt-0.5" data-icon="info">info</span>
+<p class="text-[12px] text-on-surface-variant leading-relaxed">
+                        The new staff member will receive an email invitation to verify their account and set a permanent password. 
+                    </p>
+</div>
+<div class="flex gap-3 pt-4">
+<button class="flex-1 py-2.5 font-label-md text-primary border border-primary rounded-xl hover:bg-primary/5 transition-all" onclick="closeModal()" type="button">
+                        Cancel
+                    </button>
+<button class="flex-1 py-2.5 font-label-md bg-primary text-on-primary rounded-xl hover:brightness-90 transition-all shadow-md" type="submit">
+                        Create Account
+                    </button>
+</div>
+</form>
+</div>
+</div>
+<script>
+        function openModal() {
+            const modal = document.getElementById('newAccountModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('newAccountModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Background click to close
+        document.getElementById('newAccountModal').addEventListener('click', (e) => {
+            if (e.target.id === 'newAccountModal') closeModal();
+        });
+    </script>
+</body></html>
