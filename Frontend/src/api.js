@@ -108,3 +108,69 @@ export async function getCurrentUser(token) {
 
   return response.json();
 }
+
+
+// --- Coordinator flow: review + refer (Phase 4) ---------------------------
+//
+// All three calls below hit PROTECTED routes, so each sends the JWT as
+// "Authorization: Bearer <token>". Unlike login (which posts a FORM body), these
+// send/receive JSON, so they set Content-Type: application/json where there's a body.
+
+// List every application for the coordinator's review table. Hits GET /applications
+// (coordinator/admin only). Returns an array of ApplicationRead objects, each with
+// its nested eligibility answers.
+export async function listApplications(token) {
+  const response = await fetch(`${API_URL}/applications`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not load applications (${response.status})`);
+  }
+
+  return response.json();
+}
+
+
+// Move an application along the workflow by setting its status. Hits
+// PATCH /applications/{id}. `status` must be one of "reviewed" | "approved" |
+// "rejected" (the backend's Literal rejects anything else with a 422). Returns the
+// updated ApplicationRead.
+export async function updateApplicationStatus(token, id, status) {
+  const response = await fetch(`${API_URL}/applications/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not update application (${response.status})`);
+  }
+
+  return response.json();
+}
+
+
+// Refer an APPROVED application to a hospital. Hits POST /referrals. We send only
+// application_id + hospital — the backend stamps "referred_by" from the logged-in
+// user itself, so the client can't forge who referred. Returns a ReferralRead.
+// Note: the backend returns 400 if the application isn't approved yet.
+export async function createReferral(token, { application_id, hospital }) {
+  const response = await fetch(`${API_URL}/referrals`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ application_id, hospital }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not create referral (${response.status})`);
+  }
+
+  return response.json();
+}

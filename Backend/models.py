@@ -92,3 +92,32 @@ class EligibilityAnswer(Base):
     # Lets us write answer.application to get the parent Application object.
     application = relationship("Application", back_populates="answers")
 
+
+class Referral(Base):
+    # A referral records that a coordinator sent an (approved) application on to a
+    # hospital. One application could be referred more than once over time, so this
+    # is its own table rather than a column on Application.
+    __tablename__ = "referrals"
+
+    # Primary key — same pattern as every other table.
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Which application is being referred. ForeignKey ties this row to a real
+    # application; nullable=False means a referral must always point at one.
+    application_id = Column(Integer, ForeignKey("applications.id"), nullable=False)
+
+    # The hospital the patient is being referred to. Just free text for now.
+    hospital = Column(String, nullable=False)
+
+    # WHO made the referral: the id of the staff user (coordinator/admin) who did
+    # it. We fill this from the logged-in user, never from the request body, so it
+    # can't be forged. FK to users.id keeps it pointing at a real account.
+    referred_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # Where this referral is in its own little lifecycle. Starts "referred"; the
+    # nurse flow (Phase 5) will move it forward (e.g. "contacted", "enrolled").
+    status = Column(String, nullable=False, default="referred")
+
+    # When the referral was made — same timestamp pattern as the other tables.
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+

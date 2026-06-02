@@ -1,6 +1,7 @@
 # APIRouter lets us define a group of routes here and plug them into the main
 # app later. Depends is how we ask FastAPI to inject our get_db session.
-from fastapi import APIRouter, Depends
+# HTTPException + status let us return a clean 404 when an application isn't found.
+from fastapi import APIRouter, Depends, HTTPException, status
 
 # The type of object get_db hands us — used only for the type hint below.
 from sqlalchemy.orm import Session
@@ -11,6 +12,9 @@ from database import get_db
 # models = the SQLAlchemy tables; schemas = the Pydantic request/response shapes.
 import models
 import schemas
+# auth.require_role gives us the role guard built in Phase 3. The staff routes
+# below depend on it so only coordinators/admins can reach them.
+import auth
 
 
 # A mini-app for everything under /applications.
@@ -64,4 +68,75 @@ def create_application(
 
     # 5. Return the ORM object. response_model=ApplicationRead converts it into
     #    the response shape (works because ApplicationRead has from_attributes).
+    return application
+
+
+# GET /applications  → a coordinator (or admin) lists all applications to review.
+# - response_model=list[ApplicationRead]: each row is filtered through the read
+#   schema, so the response is a clean array of applications (no data leaks).
+# - The require_role(...) dependency runs FIRST: no valid token -> 401, wrong role
+#   (e.g. a nurse) -> 403. Patients have no token at all, so this stays staff-only.
+@router.get("", response_model=list[schemas.ApplicationRead])
+def list_applications(
+    db: Session = Depends(get_db),
+    # We don't use the returned user here, but depending on the guard is what
+    # actually enforces the auth check. The "_" name signals "intentionally unused".
+    _: models.User = Depends(auth.require_role("coordinator", "admin")),
+):
+    # Newest first so the freshest applications are at the top of the review list.
+    return (
+        db.query(models.Application)
+        .order_by(models.Application.created_at.desc())
+        .all()
+    )
+
+
+# GET /applications/{application_id}  → fetch one application (with its eligibility
+# answers, since ApplicationRead nests them). Used to open a single application for
+# review. Same staff-only guard as the list route.
+@router.get("/{application_id}", response_model=schemas.ApplicationRead)
+def get_application(
+    application_id: int,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth.require_role("coordinator", "admin")),
+):
+    application = (
+        db.query(models.Application)
+        .filter(models.Application.id == application_id)
+        .first()
+    )
+    # No row with that id -> 404 Not Found (rather than returning null/200).
+    if application is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Application not found"
+        )
+    return application
+
+
+# PATCH /applications/{application_id}  → a coordinator moves an application along
+# the workflow by setting its status (reviewed / approved / rejected). PATCH (not
+# PUT) because we're updating ONE field, not replacing the whole resource.
+@router.patch("/{application_id}", response_model=schemas.ApplicationRead)
+def update_application_status(
+    application_id: int,
+    # ApplicationStatusUpdate.status is a Literal, so an invalid status is rejected
+    # with a 422 before we ever reach this body.
+    payload: schemas.ApplicationStatusUpdate,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth.require_role("coordinator", "admin")),
+):
+    application = (
+        db.query(models.Application)
+        .filter(models.Application.id == application_id)
+        .first()
+    )
+    if application is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Application not found"
+        )
+
+    # Apply the new status, then commit + refresh so the response reflects the DB.
+    application.status = payload.status
+    db.commit()
+    db.refresh(application)
     return application

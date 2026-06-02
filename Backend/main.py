@@ -6,8 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import models
 from database import engine
-# Our routers: applications (public patient form) and auth (staff login).
-from routers import applications, auth
+# Our routers: applications (public patient form + coordinator review), auth
+# (staff login), and referrals (coordinator refers an approved application).
+from routers import applications, auth, referrals
 
 # Reads every class in models.py and creates the matching tables in app.db
 # (only creates tables that don't already exist — safe to run every startup).
@@ -36,6 +37,10 @@ app.include_router(applications.router)
 
 # Plug in the auth router too — this is what serves POST /auth/login and GET /auth/me.
 app.include_router(auth.router)
+
+# Plug in the referrals router — serves POST /referrals (coordinator refers an
+# approved application to a hospital).
+app.include_router(referrals.router)
 
 @app.get("/")
 def home():

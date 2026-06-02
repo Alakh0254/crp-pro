@@ -5,6 +5,9 @@
 
 import { useEffect, useState } from "react";
 import { getCurrentUser } from "../api.js";
+// The role-specific dashboard for coordinators (and admins, who can do everything
+// a coordinator can). Other roles keep the simple identity view for now.
+import CoordinatorDashboard from "./CoordinatorDashboard.jsx";
 
 // `token` is the JWT App is holding; `onLogout` clears it and returns to login.
 function StaffHome({ token, onLogout }) {
@@ -63,13 +66,19 @@ function StaffHome({ token, onLogout }) {
           <p>
             Logged in as <strong>{user.name}</strong> ({user.email})
           </p>
-          {/* The role decides which dashboard you'll get in later phases. */}
+          {/* The role decides which dashboard you get. Coordinators and admins get
+              the coordinator workspace; other roles (nurse) still see just this
+              identity block until their flow is built (Phase 5+). */}
           <p>
             Role: <strong>{user.role}</strong>
           </p>
           <button type="button" onClick={onLogout}>
             Log out
           </button>
+
+          {(user.role === "coordinator" || user.role === "admin") && (
+            <CoordinatorDashboard token={token} />
+          )}
         </div>
       )}
     </div>

@@ -1,5 +1,8 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
+# Literal lets us pin a field to an exact set of allowed strings. Anything else
+# is rejected by Pydantic with a 422 automatically — no hand-written checks.
+from typing import Literal
 
 
 # INPUT: a single eligibility answer the patient sends.
@@ -71,4 +74,35 @@ class UserRead(BaseModel):
     is_active: bool
 
     # Lets Pydantic read straight from a User ORM object (user.id, user.name, ...).
+    model_config = ConfigDict(from_attributes=True)
+
+
+# INPUT: what a coordinator sends to move an application along the workflow.
+# Only the status changes here, so this schema has exactly one field. The Literal
+# pins it to the three values a coordinator may set by hand — "new" is the starting
+# state and "referred" is set by the referrals endpoint, so neither is allowed here.
+# Send anything outside this set and Pydantic returns 422 before our code runs.
+class ApplicationStatusUpdate(BaseModel):
+    status: Literal["reviewed", "approved", "rejected"]
+
+
+# INPUT: what a coordinator sends to refer an approved application to a hospital.
+# Notice there's no referred_by here — the server fills that from the logged-in
+# user so the "who referred this" can't be spoofed by the client.
+class ReferralCreate(BaseModel):
+    application_id: int
+    hospital: str
+
+
+# OUTPUT: what the API sends back after a referral is created. Includes the
+# server-filled fields (id, referred_by, status, created_at).
+class ReferralRead(BaseModel):
+    id: int
+    application_id: int
+    hospital: str
+    referred_by: int
+    status: str
+    created_at: datetime
+
+    # Lets Pydantic read straight from a Referral ORM object.
     model_config = ConfigDict(from_attributes=True)
