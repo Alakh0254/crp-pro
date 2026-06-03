@@ -8,6 +8,10 @@ import { getCurrentUser } from "../api.js";
 // The role-specific dashboard for coordinators (and admins, who can do everything
 // a coordinator can). Other roles keep the simple identity view for now.
 import CoordinatorDashboard from "./CoordinatorDashboard.jsx";
+// The nurse's workspace (Phase 5): follow up on referrals + create trials.
+import NurseDashboard from "./NurseDashboard.jsx";
+// The admin's workspace (Phase 6): manage staff accounts + launch trials.
+import AdminDashboard from "./AdminDashboard.jsx";
 
 // `token` is the JWT App is holding; `onLogout` clears it and returns to login.
 function StaffHome({ token, onLogout }) {
@@ -66,9 +70,10 @@ function StaffHome({ token, onLogout }) {
           <p>
             Logged in as <strong>{user.name}</strong> ({user.email})
           </p>
-          {/* The role decides which dashboard you get. Coordinators and admins get
-              the coordinator workspace; other roles (nurse) still see just this
-              identity block until their flow is built (Phase 5+). */}
+          {/* The role decides which dashboard(s) you get. Coordinators and admins
+              get the coordinator workspace; nurses get the nurse workspace (Phase 5);
+              admins ALSO get the admin workspace (Phase 6: manage accounts + launch
+              trials) on top, since an admin oversees everything. */}
           <p>
             Role: <strong>{user.role}</strong>
           </p>
@@ -76,9 +81,17 @@ function StaffHome({ token, onLogout }) {
             Log out
           </button>
 
+          {/* Admin-only workspace. Passed the admin's own id so it can avoid
+              offering a self-disable button (which the backend rejects anyway). */}
+          {user.role === "admin" && (
+            <AdminDashboard token={token} currentUserId={user.id} />
+          )}
+
           {(user.role === "coordinator" || user.role === "admin") && (
             <CoordinatorDashboard token={token} />
           )}
+
+          {user.role === "nurse" && <NurseDashboard token={token} />}
         </div>
       )}
     </div>

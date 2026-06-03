@@ -74,3 +74,49 @@ def create_referral(
     # are populated on the object we return.
     db.refresh(referral)
     return referral
+
+
+# GET /referrals  → a nurse (or admin) lists referred patients to follow up on.
+# response_model=list[ReferralDetailRead] nests each referral's patient application
+# (name, contact, eligibility answers) so the nurse sees WHO was referred without a
+# second request. The require_role guard runs FIRST: no token -> 401, wrong role
+# (e.g. a coordinator) -> 403. Newest first, like the applications list.
+@router.get("", response_model=list[schemas.ReferralDetailRead])
+def list_referrals(
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth.require_role("nurse", "admin")),
+):
+    return (
+        db.query(models.Referral)
+        .order_by(models.Referral.created_at.desc())
+        .all()
+    )
+
+
+# PATCH /referrals/{referral_id}  → a nurse records follow-up by moving a referral
+# along its lifecycle (contacted / enrolled / declined). PATCH (not PUT) because
+# we're updating ONE field. ReferralStatusUpdate.status is a Literal, so an invalid
+# value is rejected with a 422 before we reach this body.
+@router.patch("/{referral_id}", response_model=schemas.ReferralRead)
+def update_referral_status(
+    referral_id: int,
+    payload: schemas.ReferralStatusUpdate,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth.require_role("nurse", "admin")),
+):
+    referral = (
+        db.query(models.Referral)
+        .filter(models.Referral.id == referral_id)
+        .first()
+    )
+    # No row with that id -> 404 Not Found (rather than returning null/200).
+    if referral is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Referral not found"
+        )
+
+    # Apply the new status, then commit + refresh so the response reflects the DB.
+    referral.status = payload.status
+    db.commit()
+    db.refresh(referral)
+    return referral

@@ -32,6 +32,12 @@ SEED_USERS = [
         "password": "coord123",
         "role": "coordinator",
     },
+    {
+        "name": "Nurse User",
+        "email": "nurse@crp.test",
+        "password": "nurse123",
+        "role": "nurse",
+    },
 ]
 
 

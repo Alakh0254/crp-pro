@@ -106,3 +106,79 @@ class ReferralRead(BaseModel):
 
     # Lets Pydantic read straight from a Referral ORM object.
     model_config = ConfigDict(from_attributes=True)
+
+
+# OUTPUT: a referral WITH the full patient application nested inside it. The nurse
+# dashboard (Phase 5) lists referrals and needs to see WHO was referred — name,
+# contact, eligibility answers — without a second request. Pydantic fills the
+# nested `application` automatically by reading the Referral.application
+# relationship (added to the model in Phase 5).
+class ReferralDetailRead(BaseModel):
+    id: int
+    application_id: int
+    hospital: str
+    referred_by: int
+    status: str
+    created_at: datetime
+    # The referred patient's application, shaped by ApplicationRead (defined above).
+    application: ApplicationRead
+
+    # Lets Pydantic read straight from a Referral ORM object (and walk .application).
+    model_config = ConfigDict(from_attributes=True)
+
+
+# INPUT: what a nurse sends to record follow-up on a referral. Like
+# ApplicationStatusUpdate, the Literal pins the status to the values a nurse may
+# set — "referred" is the starting state (set by the referrals POST), so it's not
+# allowed here. Anything outside this set is rejected with a 422 before our code runs.
+class ReferralStatusUpdate(BaseModel):
+    status: Literal["contacted", "enrolled", "declined"]
+
+
+# INPUT: what a nurse (or admin) sends to create a trial. No id/status/created_by/
+# created_at — the server fills those in (status defaults to "draft", created_by
+# comes from the logged-in user).
+class TrialCreate(BaseModel):
+    title: str
+    description: str
+
+
+# OUTPUT: what the API sends back for a trial. Includes the server-filled fields.
+class TrialRead(BaseModel):
+    id: int
+    title: str
+    description: str
+    status: str
+    created_by: int
+    created_at: datetime
+
+    # Lets Pydantic read straight from a Trial ORM object.
+    model_config = ConfigDict(from_attributes=True)
+
+
+# INPUT: what an admin sends to "launch" (or later close) a trial. Same Literal
+# pattern as the status updates above — "draft" is the starting state (set at
+# creation), so it's not a value an admin sets by hand here. Launching a trial
+# means moving it "draft" -> "open". Anything outside this set is rejected with a
+# 422 before our code runs.
+class TrialStatusUpdate(BaseModel):
+    status: Literal["open", "closed"]
+
+
+# INPUT: what an admin sends to create a coordinator/nurse account (Phase 6).
+# No id/is_active/created_at — the server fills those in (is_active defaults to
+# True). role is pinned with a Literal to the two account types an admin manages:
+# admins are seeded directly (see seed_users.py), never minted through this route.
+class UserCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: Literal["coordinator", "nurse"]
+
+
+# INPUT: what an admin sends to enable or disable an account. Disabling (setting
+# is_active=False) is how an admin "removes" a staff member without deleting the
+# row — the login route already refuses a disabled account. One field only, so
+# like the status updates this schema is a single Boolean.
+class UserStatusUpdate(BaseModel):
+    is_active: bool

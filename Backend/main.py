@@ -7,8 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import models
 from database import engine
 # Our routers: applications (public patient form + coordinator review), auth
-# (staff login), and referrals (coordinator refers an approved application).
-from routers import applications, auth, referrals
+# (staff login), referrals (coordinator refers; nurse follows up), and trials
+# (nurse/admin create trials).
+from routers import applications, auth, referrals, trials, users
 
 # Reads every class in models.py and creates the matching tables in app.db
 # (only creates tables that don't already exist — safe to run every startup).
@@ -39,8 +40,18 @@ app.include_router(applications.router)
 app.include_router(auth.router)
 
 # Plug in the referrals router — serves POST /referrals (coordinator refers an
-# approved application to a hospital).
+# approved application), plus GET /referrals and PATCH /referrals/{id} (the nurse
+# follow-up flow).
 app.include_router(referrals.router)
+
+# Plug in the trials router — serves POST /trials and GET /trials (nurse/admin
+# create and list clinical trials), plus PATCH /trials/{id} (admin launches one).
+app.include_router(trials.router)
+
+# Plug in the users router — serves POST /users, GET /users and PATCH /users/{id}
+# (admin-only account management: create coordinator/nurse accounts, list them,
+# and enable/disable one). This is the Phase 6 admin flow.
+app.include_router(users.router)
 
 @app.get("/")
 def home():

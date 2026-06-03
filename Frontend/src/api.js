@@ -174,3 +174,172 @@ export async function createReferral(token, { application_id, hospital }) {
 
   return response.json();
 }
+
+
+// --- Nurse flow: follow-up + trials (Phase 5) ------------------------------
+//
+// Same shape as the coordinator calls: every one hits a PROTECTED route, so each
+// sends the JWT as "Authorization: Bearer <token>". The backend's role guard
+// allows only nurse/admin here, so a coordinator's token gets a 403.
+
+// List referred patients for the nurse to follow up on. Hits GET /referrals.
+// Returns an array of ReferralDetailRead objects — each referral has its full
+// patient `application` (name, contact, eligibility answers) nested inside it.
+export async function listReferrals(token) {
+  const response = await fetch(`${API_URL}/referrals`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not load referrals (${response.status})`);
+  }
+
+  return response.json();
+}
+
+
+// Record follow-up by moving a referral along its lifecycle. Hits
+// PATCH /referrals/{id}. `status` must be one of "contacted" | "enrolled" |
+// "declined" (the backend's Literal rejects anything else with a 422). Returns
+// the updated ReferralRead.
+export async function updateReferralStatus(token, id, status) {
+  const response = await fetch(`${API_URL}/referrals/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not update referral (${response.status})`);
+  }
+
+  return response.json();
+}
+
+
+// Create a clinical trial. Hits POST /trials. We send only title + description —
+// the backend stamps "created_by" from the logged-in user and defaults the status
+// to "draft". Returns a TrialRead.
+export async function createTrial(token, { title, description }) {
+  const response = await fetch(`${API_URL}/trials`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ title, description }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not create trial (${response.status})`);
+  }
+
+  return response.json();
+}
+
+
+// List every trial (newest first). Hits GET /trials. Returns an array of
+// TrialRead objects. The nurse dashboard shows this so a freshly created trial
+// appears in the list.
+export async function listTrials(token) {
+  const response = await fetch(`${API_URL}/trials`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not load trials (${response.status})`);
+  }
+
+  return response.json();
+}
+
+
+// --- Admin flow: manage accounts + launch trials (Phase 6) -----------------
+//
+// Every call here hits an admin-only route, so each sends the JWT as
+// "Authorization: Bearer <token>". The backend's role guard returns 403 for any
+// non-admin token, so these only work from the admin dashboard.
+
+// List every staff account for the admin dashboard. Hits GET /users (admin only).
+// Returns an array of UserRead objects: { id, name, email, role, is_active }.
+// (The password hash is never included — the backend's UserRead omits it.)
+export async function listUsers(token) {
+  const response = await fetch(`${API_URL}/users`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not load users (${response.status})`);
+  }
+
+  return response.json();
+}
+
+
+// Create a coordinator/nurse account. Hits POST /users. `role` must be
+// "coordinator" or "nurse" (the backend's Literal rejects anything else with a
+// 422). Returns the new UserRead. Note: the backend returns 400 if the email is
+// already taken.
+export async function createUser(token, { name, email, password, role }) {
+  const response = await fetch(`${API_URL}/users`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name, email, password, role }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not create user (${response.status})`);
+  }
+
+  return response.json();
+}
+
+
+// Enable or disable a staff account. Hits PATCH /users/{id}. Pass is_active=false
+// to disable (the backend then refuses that user's logins) or true to re-enable.
+// Returns the updated UserRead. Note: the backend returns 400 if an admin tries
+// to disable their OWN account (that would lock them out).
+export async function updateUserStatus(token, id, isActive) {
+  const response = await fetch(`${API_URL}/users/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ is_active: isActive }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not update user (${response.status})`);
+  }
+
+  return response.json();
+}
+
+
+// Launch (or close) a trial by moving its status. Hits PATCH /trials/{id}.
+// `status` must be "open" or "closed" (the backend's Literal rejects anything
+// else with a 422). Launching a draft trial means status "open". Returns the
+// updated TrialRead.
+export async function updateTrialStatus(token, id, status) {
+  const response = await fetch(`${API_URL}/trials/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not update trial (${response.status})`);
+  }
+
+  return response.json();
+}

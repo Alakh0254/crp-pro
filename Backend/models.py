@@ -115,9 +115,45 @@ class Referral(Base):
     referred_by = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     # Where this referral is in its own little lifecycle. Starts "referred"; the
-    # nurse flow (Phase 5) will move it forward (e.g. "contacted", "enrolled").
+    # nurse flow (Phase 5) moves it forward (e.g. "contacted", "enrolled").
     status = Column(String, nullable=False, default="referred")
 
     # When the referral was made — same timestamp pattern as the other tables.
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Python-side link to the referred application, so the nurse flow can read the
+    # patient's details (name, contact, eligibility answers) straight off the
+    # referral without a second query. One-directional is enough here — we only
+    # ever navigate referral -> application, never the reverse — so unlike
+    # Application.answers we don't add a back_populates/cascade.
+    application = relationship("Application")
+
+
+class Trial(Base):
+    # A clinical trial. A nurse (or admin) creates one in Phase 5; an admin
+    # "launches" it in Phase 6 by moving its status forward. Applications point at
+    # a trial via Application.trial_id (kept a plain int for now, not a FK).
+    __tablename__ = "trials"
+
+    # Primary key — same pattern as every other table.
+    id = Column(Integer, primary_key=True, index=True)
+
+    # The trial's short title. Required.
+    title = Column(String, nullable=False)
+
+    # A longer description of the trial. Required.
+    description = Column(String, nullable=False)
+
+    # Where the trial is in its lifecycle. Starts "draft"; an admin launches it
+    # later (Phase 6) by setting it to e.g. "open". Defaulted so the create route
+    # doesn't have to set it.
+    status = Column(String, nullable=False, default="draft")
+
+    # WHO created the trial: the id of the staff user (nurse/admin) who did it.
+    # Filled from the logged-in user, never the request body, so it can't be
+    # forged. FK to users.id keeps it pointing at a real account.
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # When the trial was created — same timestamp pattern as the other tables.
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
