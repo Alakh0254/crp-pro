@@ -75,12 +75,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(newToken);
   }
 
-  // logout: forget the token everywhere and drop the cached /auth/me result so a
-  // future different login can't briefly show the previous user.
+  // logout: forget the token everywhere and wipe the ENTIRE Query cache. We clear all
+  // of it — not just /auth/me — because the dashboards cache PHI-bearing lists
+  // (applications, referrals, etc.); leaving those resident would keep patient names,
+  // contacts, and eligibility answers in memory after sign-out (a PHI-exposure window
+  // on a shared workstation). clear() drops everything; the keys are token-scoped, so
+  // a future login refetches under its own token anyway.
   function logout() {
     clearToken();
     setToken(null);
-    queryClient.removeQueries({ queryKey: ["currentUser"] });
+    queryClient.clear();
   }
 
   // If we have a token but the /auth/me fetch errored, the token is expired or

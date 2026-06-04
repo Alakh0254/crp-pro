@@ -14,9 +14,9 @@
 //   *          → anything else falls back to the public form.
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import PatientForm from "./pages/PatientForm.jsx";
+import PatientForm from "./pages/PatientForm";
 import Login from "./pages/Login.jsx";
-import StaffHome from "./pages/StaffHome.jsx";
+import StaffHome from "./pages/StaffHome";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 function App() {
