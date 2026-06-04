@@ -4,7 +4,7 @@
 // (coordinator/nurse/admin), which we'll show based on user.role.
 
 import { useEffect, useState } from "react";
-import { getCurrentUser } from "../api.js";
+import { getCurrentUser } from "../api";
 // The role-specific dashboard for coordinators (and admins, who can do everything
 // a coordinator can). Other roles keep the simple identity view for now.
 import CoordinatorDashboard from "./CoordinatorDashboard.jsx";

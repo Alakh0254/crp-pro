@@ -1,0 +1,40 @@
+{
+  // TypeScript's config. `npm run typecheck` runs `tsc --noEmit`, which reads this
+  // file to decide what to check and how strictly. Vite itself never reads this —
+  // it strips types with esbuild and never type-checks — so this file is purely the
+  // "did I make a type mistake?" safety net we run by hand.
+  "compilerOptions": {
+    // Modern JS output target + the browser libs we rely on (DOM, fetch, etc.).
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+
+    // "bundler" matches how Vite resolves imports: it lets us write
+    // `import ... from "./api"` (no extension) and have it find `api.ts`. This is
+    // why migrating api.js -> api.ts only needs the `.js` dropped from importers.
+    "moduleResolution": "bundler",
+
+    // Let React's automatic JSX runtime compile JSX without `import React`.
+    "jsx": "react-jsx",
+
+    // We only type-check; Vite does the actual building, so emit nothing.
+    "noEmit": true,
+    "isolatedModules": true,
+    // Don't type-check inside node_modules' .d.ts files — faster, fewer false alarms.
+    "skipLibCheck": true,
+
+    // strict = the whole family of strong checks (no implicit any, null checks, ...).
+    // This is the point of adopting TS: it applies to our new .ts/.tsx files.
+    "strict": true,
+
+    // We still have .jsx pages this phase. allowJs lets them sit in the program so
+    // api.ts can be imported by them; checkJs:false means we DON'T flood the output
+    // with type errors for code that was never written as TypeScript. As each page
+    // is later migrated to .tsx, it gets full strict checking automatically.
+    "allowJs": true,
+    "checkJs": false
+  },
+  // Only our source is checked — not node_modules, dist, or the design mockups.
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "stitch_crp_pro_ui_design_spec"]
+}

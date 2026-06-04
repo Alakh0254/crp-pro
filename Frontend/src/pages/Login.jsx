@@ -4,7 +4,7 @@
 // use it. Patients never see this page — they use the public application form.
 
 import { useState } from "react";
-import { login } from "../api.js";
+import { login } from "../api";
 
 // `onLoggedIn` is a function App passes in. We call it with the token once login
 // succeeds, so App can save it and switch to the logged-in view.

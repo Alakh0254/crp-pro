@@ -1,0 +1,40 @@
+/* The app's single global stylesheet. main.jsx imports this once, which pulls
+   Tailwind into the build. */
+
+/* These three directives are where Tailwind injects its generated CSS:
+   - base:       sensible cross-browser resets + element defaults
+   - components: component classes (and any we add with @layer components)
+   - utilities:  the utility classes we use in markup (bg-primary, p-md, ...) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* App-wide defaults layered on top of Tailwind's reset: Inter as the base font and
+   the design system's background/text colors so every page starts on-brand without
+   repeating these classes everywhere. (@layer base keeps these low-priority so any
+   utility class on an element still wins.) */
+@layer base {
+  body {
+    @apply bg-background text-on-surface font-sans antialiased;
+  }
+}
+
+/* Material Symbols icon helper. The self-hosted @fontsource package ships only the
+   @font-face (loaded in main.jsx); this is the usage class Google's stylesheet used
+   to provide, so `<span class="material-symbols-outlined">home</span>` renders as an
+   icon (ligatures on) instead of literal text. */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+}

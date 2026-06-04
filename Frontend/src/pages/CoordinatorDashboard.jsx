@@ -12,7 +12,7 @@ import {
   listApplications,
   updateApplicationStatus,
   createReferral,
-} from "../api.js";
+} from "../api";
 
 // `token` is the logged-in coordinator's JWT, passed down from StaffHome.
 function CoordinatorDashboard({ token }) {

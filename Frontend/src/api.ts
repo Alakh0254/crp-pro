@@ -2,6 +2,102 @@
 // backend. Every page imports functions from here instead of writing fetch URLs
 // by hand. If the backend address ever changes (e.g. when we deploy), we edit
 // this single line rather than hunting through every page.
+//
+// This file is now TypeScript (.ts). The runtime behaviour is unchanged from the
+// old api.js — we've only ADDED types: each request payload and response is now
+// described by an `interface` below, so the editor catches a wrong field name or a
+// typo'd status value before the code ever runs. The types mirror the backend's
+// Pydantic schemas in ../Backend/schemas.py exactly.
+
+// --- Shared types: these mirror the backend's *Read / *Create schemas ----------
+
+// A single eligibility answer. `Create` is what the patient sends (just the Q+A);
+// `Read` is what the API returns (adds the server-assigned id).
+export interface EligibilityAnswerCreate {
+  question: string;
+  answer: string;
+}
+export interface EligibilityAnswerRead {
+  id: number;
+  question: string;
+  answer: string;
+}
+
+// A patient application. `Create` = what the public form submits; `Read` = the full
+// record the API returns (with server-filled id/status/created_at and saved answers).
+export interface ApplicationCreate {
+  patient_name: string;
+  email: string;
+  contact: string;
+  trial_id?: number | null;
+  answers: EligibilityAnswerCreate[];
+}
+export interface ApplicationRead {
+  id: number;
+  patient_name: string;
+  email: string;
+  contact: string;
+  trial_id: number | null;
+  status: string;
+  created_at: string; // JSON has no Date type — datetimes arrive as ISO strings.
+  answers: EligibilityAnswerRead[];
+}
+
+// The exact set of statuses a coordinator may set by hand (backend Literal). Typing
+// this as a union means `updateApplicationStatus(token, id, "appoved")` is a compile
+// error, not a runtime 422.
+export type ApplicationStatus = "reviewed" | "approved" | "rejected";
+
+// A safe view of a staff user. Note there is no password hash — the backend's
+// UserRead omits it, so it can't appear here either.
+export interface UserRead {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+}
+
+// A referral of an approved application to a hospital. `Detail` is the same record
+// with the full patient `application` nested inside (what the nurse dashboard lists).
+export interface ReferralRead {
+  id: number;
+  application_id: number;
+  hospital: string;
+  referred_by: number;
+  status: string;
+  created_at: string;
+}
+export interface ReferralDetailRead extends ReferralRead {
+  application: ApplicationRead;
+}
+
+// The statuses a nurse may set when recording follow-up (backend Literal).
+export type ReferralStatus = "contacted" | "enrolled" | "declined";
+
+// A clinical trial. `Read` is the full record; creation only needs title+description.
+export interface TrialRead {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  created_by: number;
+  created_at: string;
+}
+
+// The statuses an admin may set on a trial (backend Literal). "draft" is the
+// starting state set at creation, so it isn't settable here.
+export type TrialStatus = "open" | "closed";
+
+// The two account types an admin can mint (backend Literal — admins are seeded, not
+// created through the API).
+export type CreatableRole = "coordinator" | "nurse";
+
+// The login response shape from POST /auth/login (OAuth2 standard).
+interface TokenResponse {
+  access_token: string;
+  token_type: string;
+}
 
 // The base address of the FastAPI server during local development.
 const API_URL = "http://localhost:8000";
@@ -10,11 +106,14 @@ const API_URL = "http://localhost:8000";
 //
 // `payload` must match the backend's ApplicationCreate schema exactly:
 //   { patient_name, email, contact, trial_id (optional), answers: [{question, answer}] }
-// Wrong field names or types → the backend replies 422 (validation error).
+// Wrong field names or types → the backend replies 422 (validation error). With the
+// `ApplicationCreate` type, most of those mistakes are now caught while you type.
 //
 // `async` means this function returns a Promise; callers use `await` to get the
 // result once the network request finishes.
-export async function createApplication(payload) {
+export async function createApplication(
+  payload: ApplicationCreate
+): Promise<ApplicationRead> {
   // fetch() sends the HTTP request. We await the Response object it resolves to.
   const response = await fetch(`${API_URL}/applications`, {
     // POST = "create a new resource" (our POST /applications route).
@@ -50,14 +149,14 @@ const TOKEN_KEY = "crp_token";
 
 // Save / read / remove the token. These three tiny wrappers are the ONLY code
 // that touches localStorage, so the rest of the app never deals with it directly.
-export function saveToken(token) {
+export function saveToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token);
 }
-export function getToken() {
+export function getToken(): string | null {
   // Returns the saved token, or null if nobody is logged in.
   return localStorage.getItem(TOKEN_KEY);
 }
-export function clearToken() {
+export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
@@ -69,7 +168,7 @@ export function clearToken() {
 // expects FORM fields (application/x-www-form-urlencoded), NOT JSON — and the
 // email goes in a field literally named "username". This is the standard OAuth2
 // shape, and it's a common thing to get wrong, so note it well.
-export async function login(email, password) {
+export async function login(email: string, password: string): Promise<string> {
   // URLSearchParams builds a form-encoded body ("username=...&password=...")
   // and fetch sets the right Content-Type header for it automatically.
   const body = new URLSearchParams();
@@ -87,7 +186,7 @@ export async function login(email, password) {
   }
 
   // { access_token, token_type } — we only need the token itself.
-  const data = await response.json();
+  const data: TokenResponse = await response.json();
   return data.access_token;
 }
 
@@ -95,7 +194,7 @@ export async function login(email, password) {
 // Ask the backend "who am I?" using the stored token. This proves the token works:
 // it hits the protected GET /auth/me route, which 401s without a valid token.
 // Returns a UserRead object: { id, name, email, role, is_active }.
-export async function getCurrentUser(token) {
+export async function getCurrentUser(token: string): Promise<UserRead> {
   const response = await fetch(`${API_URL}/auth/me`, {
     // This is how we present the token on a protected route.
     headers: { Authorization: `Bearer ${token}` },
@@ -119,7 +218,9 @@ export async function getCurrentUser(token) {
 // List every application for the coordinator's review table. Hits GET /applications
 // (coordinator/admin only). Returns an array of ApplicationRead objects, each with
 // its nested eligibility answers.
-export async function listApplications(token) {
+export async function listApplications(
+  token: string
+): Promise<ApplicationRead[]> {
   const response = await fetch(`${API_URL}/applications`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -133,10 +234,14 @@ export async function listApplications(token) {
 
 
 // Move an application along the workflow by setting its status. Hits
-// PATCH /applications/{id}. `status` must be one of "reviewed" | "approved" |
-// "rejected" (the backend's Literal rejects anything else with a 422). Returns the
-// updated ApplicationRead.
-export async function updateApplicationStatus(token, id, status) {
+// PATCH /applications/{id}. `status` is typed to the three values a coordinator may
+// set (the backend's Literal rejects anything else with a 422). Returns the updated
+// ApplicationRead.
+export async function updateApplicationStatus(
+  token: string,
+  id: number,
+  status: ApplicationStatus
+): Promise<ApplicationRead> {
   const response = await fetch(`${API_URL}/applications/${id}`, {
     method: "PATCH",
     headers: {
@@ -158,7 +263,10 @@ export async function updateApplicationStatus(token, id, status) {
 // application_id + hospital — the backend stamps "referred_by" from the logged-in
 // user itself, so the client can't forge who referred. Returns a ReferralRead.
 // Note: the backend returns 400 if the application isn't approved yet.
-export async function createReferral(token, { application_id, hospital }) {
+export async function createReferral(
+  token: string,
+  { application_id, hospital }: { application_id: number; hospital: string }
+): Promise<ReferralRead> {
   const response = await fetch(`${API_URL}/referrals`, {
     method: "POST",
     headers: {
@@ -185,7 +293,9 @@ export async function createReferral(token, { application_id, hospital }) {
 // List referred patients for the nurse to follow up on. Hits GET /referrals.
 // Returns an array of ReferralDetailRead objects — each referral has its full
 // patient `application` (name, contact, eligibility answers) nested inside it.
-export async function listReferrals(token) {
+export async function listReferrals(
+  token: string
+): Promise<ReferralDetailRead[]> {
   const response = await fetch(`${API_URL}/referrals`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -199,10 +309,14 @@ export async function listReferrals(token) {
 
 
 // Record follow-up by moving a referral along its lifecycle. Hits
-// PATCH /referrals/{id}. `status` must be one of "contacted" | "enrolled" |
-// "declined" (the backend's Literal rejects anything else with a 422). Returns
-// the updated ReferralRead.
-export async function updateReferralStatus(token, id, status) {
+// PATCH /referrals/{id}. `status` is typed to the three values a nurse may set (the
+// backend's Literal rejects anything else with a 422). Returns the updated
+// ReferralRead.
+export async function updateReferralStatus(
+  token: string,
+  id: number,
+  status: ReferralStatus
+): Promise<ReferralRead> {
   const response = await fetch(`${API_URL}/referrals/${id}`, {
     method: "PATCH",
     headers: {
@@ -223,7 +337,10 @@ export async function updateReferralStatus(token, id, status) {
 // Create a clinical trial. Hits POST /trials. We send only title + description —
 // the backend stamps "created_by" from the logged-in user and defaults the status
 // to "draft". Returns a TrialRead.
-export async function createTrial(token, { title, description }) {
+export async function createTrial(
+  token: string,
+  { title, description }: { title: string; description: string }
+): Promise<TrialRead> {
   const response = await fetch(`${API_URL}/trials`, {
     method: "POST",
     headers: {
@@ -244,7 +361,7 @@ export async function createTrial(token, { title, description }) {
 // List every trial (newest first). Hits GET /trials. Returns an array of
 // TrialRead objects. The nurse dashboard shows this so a freshly created trial
 // appears in the list.
-export async function listTrials(token) {
+export async function listTrials(token: string): Promise<TrialRead[]> {
   const response = await fetch(`${API_URL}/trials`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -266,7 +383,7 @@ export async function listTrials(token) {
 // List every staff account for the admin dashboard. Hits GET /users (admin only).
 // Returns an array of UserRead objects: { id, name, email, role, is_active }.
 // (The password hash is never included — the backend's UserRead omits it.)
-export async function listUsers(token) {
+export async function listUsers(token: string): Promise<UserRead[]> {
   const response = await fetch(`${API_URL}/users`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -279,11 +396,19 @@ export async function listUsers(token) {
 }
 
 
-// Create a coordinator/nurse account. Hits POST /users. `role` must be
-// "coordinator" or "nurse" (the backend's Literal rejects anything else with a
+// Create a coordinator/nurse account. Hits POST /users. `role` is typed to
+// "coordinator" | "nurse" (the backend's Literal rejects anything else with a
 // 422). Returns the new UserRead. Note: the backend returns 400 if the email is
 // already taken.
-export async function createUser(token, { name, email, password, role }) {
+export async function createUser(
+  token: string,
+  {
+    name,
+    email,
+    password,
+    role,
+  }: { name: string; email: string; password: string; role: CreatableRole }
+): Promise<UserRead> {
   const response = await fetch(`${API_URL}/users`, {
     method: "POST",
     headers: {
@@ -305,7 +430,11 @@ export async function createUser(token, { name, email, password, role }) {
 // to disable (the backend then refuses that user's logins) or true to re-enable.
 // Returns the updated UserRead. Note: the backend returns 400 if an admin tries
 // to disable their OWN account (that would lock them out).
-export async function updateUserStatus(token, id, isActive) {
+export async function updateUserStatus(
+  token: string,
+  id: number,
+  isActive: boolean
+): Promise<UserRead> {
   const response = await fetch(`${API_URL}/users/${id}`, {
     method: "PATCH",
     headers: {
@@ -324,10 +453,14 @@ export async function updateUserStatus(token, id, isActive) {
 
 
 // Launch (or close) a trial by moving its status. Hits PATCH /trials/{id}.
-// `status` must be "open" or "closed" (the backend's Literal rejects anything
+// `status` is typed to "open" | "closed" (the backend's Literal rejects anything
 // else with a 422). Launching a draft trial means status "open". Returns the
 // updated TrialRead.
-export async function updateTrialStatus(token, id, status) {
+export async function updateTrialStatus(
+  token: string,
+  id: number,
+  status: TrialStatus
+): Promise<TrialRead> {
   const response = await fetch(`${API_URL}/trials/${id}`, {
     method: "PATCH",
     headers: {

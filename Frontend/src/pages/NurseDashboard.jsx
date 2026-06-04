@@ -13,7 +13,7 @@ import {
   updateReferralStatus,
   createTrial,
   listTrials,
-} from "../api.js";
+} from "../api";
 
 // `token` is the logged-in nurse's JWT, passed down from StaffHome.
 function NurseDashboard({ token }) {

@@ -12,7 +12,7 @@ import Login from "./pages/Login.jsx";
 import StaffHome from "./pages/StaffHome.jsx";
 // getToken reads any token saved from a previous visit (survives a page refresh);
 // saveToken/clearToken are how we log in and out.
-import { getToken, saveToken, clearToken } from "./api.js";
+import { getToken, saveToken, clearToken } from "./api";
 
 function App() {
   // Which area is on screen: "patient" (default, public) or "staff".

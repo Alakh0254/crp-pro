@@ -5,7 +5,7 @@
 // with all the data. We just show the fields on two screens instead of one.
 
 import { useState } from "react";
-import { createApplication } from "../api.js";
+import { createApplication } from "../api";
 
 // The fixed list of eligibility questions for now. Hardcoded for v1 — later,
 // when trials exist (Phase 5), these can be loaded per-trial from the backend.

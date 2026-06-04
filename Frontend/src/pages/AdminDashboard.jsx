@@ -15,7 +15,7 @@ import {
   updateUserStatus,
   listTrials,
   updateTrialStatus,
-} from "../api.js";
+} from "../api";
 
 // `token` is the logged-in admin's JWT, passed down from StaffHome. `currentUserId`
 // is the admin's own id, so we can hide the disable button on their own row (the
