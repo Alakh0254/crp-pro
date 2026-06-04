@@ -1,14 +1,20 @@
-// The staff Login page. A coordinator/nurse/admin types their email + password,
-// we POST them to /auth/login, and on success we get back a JWT token. We hand
-// that token up to App (via the onLoggedIn callback) so the rest of the app can
-// use it. Patients never see this page — they use the public application form.
+// The staff Login page (route: /login). A coordinator/nurse/admin types their email
+// + password, we POST them to /auth/login, and on success we get back a JWT token.
+// We hand that token to the AuthContext (which stores it and fetches /auth/me), then
+// navigate to /dashboard. Patients never see this page — they use the public form.
 
 import { useState } from "react";
-import { login } from "../api";
+import { Navigate, useNavigate } from "react-router-dom";
+import { login as loginRequest } from "../api";
+import { useAuth } from "../auth/AuthContext";
 
-// `onLoggedIn` is a function App passes in. We call it with the token once login
-// succeeds, so App can save it and switch to the logged-in view.
-function Login({ onLoggedIn }) {
+function Login() {
+  // From the AuthContext: `login` saves the token (and triggers the user fetch);
+  // `token` lets us bounce an already-logged-in user away from the login page.
+  const { login, token } = useAuth();
+  // useNavigate gives us a function to change the URL after a successful login.
+  const navigate = useNavigate();
+
   // --- The two form fields. ---
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,17 +22,25 @@ function Login({ onLoggedIn }) {
   // --- UI feedback: null | "sending" | "error". ---
   const [status, setStatus] = useState(null);
 
+  // Already logged in? Don't show the login form again — go to the dashboard. This
+  // sits AFTER the hooks above so React always calls the same hooks in the same
+  // order (the Rules of Hooks); an early return before them would break that.
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   // Runs when the form is submitted (Enter key or the Log in button).
   async function handleSubmit(event) {
     event.preventDefault(); // don't let the browser reload the page
     setStatus("sending");
 
     try {
-      // login() sends the form-encoded request and returns the token string.
-      const token = await login(email, password);
-      // Hand the token to App. App stores it and re-renders into the staff view.
-      onLoggedIn(token);
-      // (No need to reset status — this component unmounts once App switches view.)
+      // loginRequest() sends the form-encoded request and returns the token string.
+      const newToken = await loginRequest(email, password);
+      // Hand the token to the AuthContext: it stores it and fetches the user. Then
+      // move to the staff dashboard.
+      login(newToken);
+      navigate("/dashboard");
     } catch (err) {
       // Wrong credentials (401) or a server problem both land here. We log the
       // real reason for debugging but show the user one friendly message.
