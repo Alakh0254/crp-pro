@@ -47,8 +47,9 @@ back to `/review` or `/implement` for the module at fault.
      back correctly.
 
 5. **Test the unhappy path too.** Bad input is rejected with a sensible error the
-   user can see, and — where access control applies — an unauthorized actor is
-   blocked across the full stack (not just at the route).
+   user can see. For any staff/authenticated endpoint, testing that a wrong-role
+   or different-org user is blocked across the full stack (not just at the route)
+   is a REQUIRED test case, not optional.
 
 ## Output — a short end-to-end report
 - **Flow & chain**: the user story and the modules it crossed (`file:line`).

@@ -27,6 +27,10 @@ Review it as a fresh pair of eyes, against the plan and the repo's conventions.
    - **Conventions** — matches the repo's structure, idioms, naming, and comment
      style; uses the established patterns rather than inventing new ones.
    - **Simplicity** — anything overcomplicated or duplicated that could be simpler.
+   - **PHI & compliance** — no patient data leaks into logs, error messages, or
+     analytics; consent is captured where required; every PHI read/write is
+     audit-logged; RBAC and org-scoping are enforced on every query; cross-org
+     and wrong-role access is rejected.
 
 3. **For each finding** give: the location (`file:line`), what's wrong, *why* it
    matters, and a **hint toward the fix** — not the finished patch, unless the

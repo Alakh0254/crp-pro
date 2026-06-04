@@ -23,8 +23,9 @@ unauthorized input**. Test all three angles.
      the function/CLI directly.
    - Exercise each entry point of **$ARGUMENTS**:
      - **Happy path** — valid input → expected result and side effects.
-     - **Failure path(s)** — bad input (expect a validation error), and where
-       access control applies, unauthorized access (expect rejection).
+     - **Failure path(s)** — bad input (expect a validation error). For any
+       staff/authenticated endpoint, testing that a wrong-role or different-org
+       user is rejected is a REQUIRED test case, not optional (expect rejection).
    - Confirm any side effects actually happened (data written, state changed).
 
 2. **Automated tests.** Use the project's existing test framework and run the
@@ -37,8 +38,9 @@ unauthorized input**. Test all three angles.
 
 ## Output
 - A short checklist: each case tested → pass/fail with evidence.
-- If all pass: "✅ **$ARGUMENTS** meets its acceptance criteria. Consider
-  committing this work, then `/explore` the next module."
+- If all pass: "✅ **$ARGUMENTS** meets its acceptance criteria. Commit this work
+  BEFORE moving to the next module, so progress is saved at a safe checkpoint,
+  then `/explore` the next module."
 - If anything fails: list the failures and route back to `/review $ARGUMENTS`.
 
 ## Rules

@@ -15,9 +15,10 @@ gather ground truth so the next stage (`/plan`) rests on facts, not assumptions.
 ## What to do
 
 1. **Read the source of truth — never trust summaries or memory.**
-   - The repo's instruction/convention files (`CLAUDE.md`, `README.md`) and any
-     roadmap/design doc — to find where **$ARGUMENTS** fits and its acceptance
-     criteria (a "done when…" if one is defined).
+   - The repo's instruction/convention files (`CLAUDE.md`, `README.md`,
+     `ARCHITECTURE.md`, `UI_SPEC.md`) and any roadmap/design doc — to find where
+     **$ARGUMENTS** fits and its acceptance criteria (a "done when…" if one is
+     defined).
    - The existing code this module touches: entry points, the relevant modules,
      data models, configuration, and any tests already covering the area.
    - Whatever **$ARGUMENTS** depends on, and what depends on it.

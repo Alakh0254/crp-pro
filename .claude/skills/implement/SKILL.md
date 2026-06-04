@@ -46,3 +46,7 @@ the real code**.
   the plan.
 - Stay scoped to **$ARGUMENTS**. Note anything else that looks broken, but don't
   fix unrelated code here.
+- **Confirm before touching sensitive code.** Before writing or changing any code
+  that touches authentication, consent, audit logging, RBAC/org-scoping, or
+  database migrations, show the diff and ask for explicit confirmation before
+  applying it.
