@@ -15,7 +15,7 @@
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import PatientForm from "./pages/PatientForm";
-import Login from "./pages/Login.jsx";
+import Login from "./pages/Login";
 import StaffHome from "./pages/StaffHome";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
