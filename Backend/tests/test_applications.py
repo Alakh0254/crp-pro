@@ -254,3 +254,80 @@ def test_refer_without_token_is_401(client):
     app_id = make_application(client)
     r = client.post("/referrals", json={"application_id": app_id, "hospital": "City General"})
     assert r.status_code == 401
+
+
+# --- Audit logging: reading one application records a PHI-access row --------
+
+def test_get_single_application_writes_audit(client):
+    # Reading a single application is a PHI read, so it must leave exactly one
+    # audit row stamped with WHO read it, WHAT they did, and WHICH application.
+    app_id = make_application(client)
+    token = token_for(client, "coordinator@crp.test", "coord123")
+    # The coordinator's own id, to check actor_id is taken from the token.
+    me = client.get("/auth/me", headers=auth_header(token)).json()
+
+    r = client.get(f"/applications/{app_id}", headers=auth_header(token))
+    assert r.status_code == 200
+
+    # Inspect the audit trail directly in the test DB.
+    db = TestSession()
+    try:
+        entries = db.query(models.AuditLog).all()
+    finally:
+        db.close()
+
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry.action == "application.read"
+    assert entry.entity == "application"
+    assert entry.entity_id == app_id
+    # actor_id comes from the logged-in user, not the request.
+    assert entry.actor_id == me["id"]
+    # The client IP was captured (TestClient reports a host, so this is set).
+    assert entry.ip is not None
+
+
+def test_missing_application_read_writes_no_audit(client):
+    # The 404 check runs BEFORE the audit write, so reading a non-existent
+    # application must NOT create an audit row.
+    token = token_for(client, "coordinator@crp.test", "coord123")
+    r = client.get("/applications/9999", headers=auth_header(token))
+    assert r.status_code == 404
+
+    db = TestSession()
+    try:
+        count = db.query(models.AuditLog).count()
+    finally:
+        db.close()
+    assert count == 0
+
+
+def test_unauthorized_read_writes_no_audit(client):
+    # No token -> the role guard rejects the request with 401 BEFORE the route
+    # body runs, so no PHI is read and no audit row is written.
+    app_id = make_application(client)
+    r = client.get(f"/applications/{app_id}")
+    assert r.status_code == 401
+
+    db = TestSession()
+    try:
+        count = db.query(models.AuditLog).count()
+    finally:
+        db.close()
+    assert count == 0
+
+
+def test_wrong_role_read_writes_no_audit(client):
+    # A valid login but the wrong role (nurse) is rejected with 403 by the guard
+    # before the route body, so the read never happens and no audit row exists.
+    app_id = make_application(client)
+    token = token_for(client, "nurse@crp.test", "nurse123")
+    r = client.get(f"/applications/{app_id}", headers=auth_header(token))
+    assert r.status_code == 403
+
+    db = TestSession()
+    try:
+        count = db.query(models.AuditLog).count()
+    finally:
+        db.close()
+    assert count == 0

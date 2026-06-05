@@ -1,7 +1,7 @@
 # APIRouter lets us define a group of routes here and plug them into the main
 # app later. Depends is how we ask FastAPI to inject our get_db session.
 # HTTPException + status let us return a clean 404 when an application isn't found.
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 # The type of object get_db hands us — used only for the type hint below.
 from sqlalchemy.orm import Session
@@ -15,6 +15,8 @@ import schemas
 # auth.require_role gives us the role guard built in Phase 3. The staff routes
 # below depend on it so only coordinators/admins can reach them.
 import auth
+# audit.write_audit records PHI access to the append-only audit trail.
+import audit
 
 
 # A mini-app for everything under /applications.
@@ -97,19 +99,39 @@ def list_applications(
 @router.get("/{application_id}", response_model=schemas.ApplicationRead)
 def get_application(
     application_id: int,
+    # Request gives us the client IP to stamp on the audit record. It has no
+    # default, so it sits before the Depends(...) params (which do).
+    request: Request,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth.require_role("coordinator", "admin")),
+    # We need the actual user now (not a throwaway "_") so the audit row records
+    # WHO read this patient's PHI, taken from the verified token.
+    current_user: models.User = Depends(auth.require_role("coordinator", "admin")),
 ):
     application = (
         db.query(models.Application)
         .filter(models.Application.id == application_id)
         .first()
     )
-    # No row with that id -> 404 Not Found (rather than returning null/200).
+    # No row with that id -> 404 Not Found (rather than returning null/200). This
+    # check runs BEFORE the audit write, so a miss leaves no audit row (we only
+    # record an actual PHI read of a real application).
     if application is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Application not found"
         )
+
+    # Record the PHI read BEFORE returning. write_audit is fail-closed: if it
+    # raises, the exception propagates and the patient's data is never sent back —
+    # an unauditable PHI access must not succeed.
+    audit.write_audit(
+        db,
+        actor_id=current_user.id,
+        action="application.read",
+        entity="application",
+        entity_id=application.id,
+        # request.client can be None in some ASGI setups; fall back to no IP then.
+        ip=request.client.host if request.client else None,
+    )
     return application
 
 

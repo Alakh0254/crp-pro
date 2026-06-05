@@ -157,3 +157,40 @@ class Trial(Base):
     # When the trial was created — same timestamp pattern as the other tables.
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+
+class AuditLog(Base):
+    # The append-only PHI audit trail. Every PHI read/write/export records one
+    # row here: WHO did it (actor_id), WHAT they did (action), to WHICH thing
+    # (entity + entity_id), from WHERE (ip), and WHEN (created_at). This is a hard
+    # compliance requirement (CLAUDE.md + ARCHITECTURE.md §6) — the trail must be
+    # append-only, so app code only ever INSERTs here, never UPDATEs or DELETEs.
+    __tablename__ = "audit_log"
+
+    # Primary key — same pattern as every other table.
+    id = Column(Integer, primary_key=True, index=True)
+
+    # WHO performed the action: the id of the staff user, taken from the verified
+    # token (never the request body) so it can't be forged. Nullable because some
+    # future audited actions have no logged-in actor (e.g. the public patient
+    # submit) — those record actor_id=None. FK to users.id keeps it pointing at a
+    # real account when it is set.
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # WHAT happened, as a short stable string like "application.read". The set of
+    # allowed values is pinned by the Action Literal in audit.py.
+    action = Column(String, nullable=False)
+
+    # WHICH kind of thing was touched ("application", "referral", ...) and its id.
+    # Kept as plain strings/ints rather than a real FK so the audit row survives
+    # even if the referenced row is later removed — the trail must never break.
+    entity = Column(String, nullable=False)
+    entity_id = Column(Integer, nullable=False)
+
+    # WHERE the request came from. Nullable because we can't always resolve a
+    # client IP (e.g. an internal/test call). The IP is itself PHI ("IP-linked
+    # identity"), so it lives here in the audit trail and never in app logs.
+    ip = Column(String, nullable=True)
+
+    # WHEN it happened — same UTC timestamp pattern as the other tables.
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
