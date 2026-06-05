@@ -1,13 +1,13 @@
-// The coordinator's workspace (Phase 4). It loads every application, shows each one
-// with its eligibility answers, and gives the coordinator three actions:
-//   - Approve / Reject  → PATCH the application's status
-//   - Refer             → POST a referral (only works once approved)
+// The coordinator's workspace (Phase 4), now built to UI_SPEC §4: a lead INBOX whose
+// rows carry no action buttons, plus a right-side PATIENT DETAIL DRAWER that opens on a
+// row click and is the only place the actions live (approve / reject / refer). Hiding
+// the actions until a patient is selected mirrors the spec — "actions are hidden until a
+// patient is selected" — though the real security boundary is the API, not this UI.
 //
-// Server state now comes from TanStack Query hooks (../hooks/queries) instead of the
-// old hand-rolled useEffect + refresh(): `useApplications` caches the list and tracks
-// loading/error, and the two mutations invalidate the cache on success so the list
-// refetches automatically — no manual refresh() calls. Local UI state (the per-row
-// hospital inputs and the action notice) stays in useState, where it belongs.
+// Server state still comes from the TanStack Query hooks (../hooks/queries): the list
+// and the two mutations that invalidate it on success so the screen refetches. The only
+// new state here is local UI: which row's drawer is open, the drawer's notice line, and
+// the hospital typed for the selected patient.
 
 import { useState } from "react";
 import {
@@ -15,7 +15,7 @@ import {
   useUpdateApplicationStatus,
   useCreateReferral,
 } from "../hooks/queries";
-import { Button, Card, Spinner, StatusBadge } from "../ui";
+import { Button, Card, Drawer, Spinner, StatusBadge } from "../ui";
 
 // `token` is the logged-in coordinator's JWT, passed down from StaffHome.
 interface CoordinatorDashboardProps {
@@ -26,17 +26,35 @@ function CoordinatorDashboard({ token }: CoordinatorDashboardProps) {
   // The cached applications list + its loading/error flags, straight from Query.
   const applicationsQuery = useApplications(token);
   // The two writes. Each invalidates ["applications"] on success (createReferral also
-  // invalidates ["referrals"]), so the list above refetches without us asking.
+  // invalidates ["referrals"]), so the list refetches without us asking.
   const updateStatus = useUpdateApplicationStatus(token);
   const createReferral = useCreateReferral(token);
 
-  // A short message shown after an action (success or error). Cleared on each new action.
+  // Which application's drawer is open (its id), or null when the drawer is closed.
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  // A short message shown inside the drawer after an action (success or error).
   const [notice, setNotice] = useState("");
-  // The hospital typed into each row's Refer box, keyed by application id, so the rows
-  // don't share one input. { [id]: "City General" }.
-  const [hospitals, setHospitals] = useState<Record<number, string>>({});
+  // The hospital typed into the drawer's Refer box for the selected patient.
+  const [hospital, setHospital] = useState("");
 
-  // Approve or reject: fire the mutation; Query refetches the list on success.
+  const applications = applicationsQuery.data ?? [];
+  // The selected application, looked up from the LIVE list so it reflects the latest
+  // status after a mutation refetches (e.g. flips to "approved"/"referred"). Null when
+  // nothing is selected or the selected row has vanished from the list.
+  const selected = applications.find((a) => a.id === selectedId) ?? null;
+
+  // Open a row's drawer: select it and clear any per-patient UI from a previous open.
+  function openDrawer(id: number) {
+    setSelectedId(id);
+    setNotice("");
+    setHospital("");
+  }
+
+  function closeDrawer() {
+    setSelectedId(null);
+  }
+
+  // Approve or reject the selected application; Query refetches the list on success.
   function handleSetStatus(id: number, newStatus: "approved" | "rejected") {
     setNotice("");
     updateStatus.mutate(
@@ -50,20 +68,20 @@ function CoordinatorDashboard({ token }: CoordinatorDashboardProps) {
     );
   }
 
-  // Refer: read the hospital typed for THIS row, POST the referral, clear the input.
+  // Refer the selected (approved) application to the typed hospital, then clear the box.
   function handleRefer(id: number) {
     setNotice("");
-    const hospital = (hospitals[id] || "").trim();
-    if (!hospital) {
+    const name = hospital.trim();
+    if (!name) {
       setNotice("Enter a hospital name before referring.");
       return;
     }
     createReferral.mutate(
-      { application_id: id, hospital },
+      { application_id: id, hospital: name },
       {
         onSuccess: () => {
-          setNotice(`Referred application #${id} to ${hospital}.`);
-          setHospitals((prev) => ({ ...prev, [id]: "" }));
+          setNotice(`Referred application #${id} to ${name}.`);
+          setHospital("");
         },
         onError: (err) => {
           // The backend returns 400 if the application isn't approved yet — the most
@@ -74,8 +92,6 @@ function CoordinatorDashboard({ token }: CoordinatorDashboardProps) {
       }
     );
   }
-
-  const applications = applicationsQuery.data ?? [];
 
   return (
     <section className="space-y-4">
@@ -97,80 +113,181 @@ function CoordinatorDashboard({ token }: CoordinatorDashboardProps) {
         <p className="text-sm text-error">Could not load applications. Try refreshing.</p>
       )}
 
-      {/* A short status line after an action. */}
-      {notice && <p className="text-sm text-on-surface-variant">{notice}</p>}
-
       {!applicationsQuery.isLoading &&
         !applicationsQuery.isError &&
         applications.length === 0 && (
           <p className="text-sm text-on-surface-variant">No applications yet.</p>
         )}
 
-      <div className="space-y-4">
+      {/* The lead inbox: one clickable row per application, no action buttons (those
+          live in the drawer). Each row is a button for keyboard + screen-reader use. */}
+      <div className="space-y-3">
         {applications.map((appn) => (
-          <Card key={appn.id} className="space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-on-surface">
-                <span className="font-semibold">
-                  #{appn.id} — {appn.patient_name}
-                </span>{" "}
-                <span className="text-on-surface-variant">
-                  ({appn.email}, {appn.contact})
-                </span>
+          <Card
+            key={appn.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => openDrawer(appn.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openDrawer(appn.id);
+              }
+            }}
+            className="flex cursor-pointer items-center justify-between gap-3 p-4 transition-colors hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <div>
+              <p className="font-semibold text-on-surface">
+                #{appn.id} — {appn.patient_name}
               </p>
-              <StatusBadge status={appn.status} />
+              <p className="text-sm text-on-surface-variant">
+                {appn.email} · {appn.contact}
+              </p>
+              <p className="text-xs text-on-surface-variant">
+                Submitted {new Date(appn.created_at).toLocaleDateString()}
+              </p>
             </div>
-
-            {/* The eligibility answers the patient submitted. */}
-            {appn.answers.length > 0 && (
-              <ul className="space-y-1 text-sm text-on-surface-variant">
-                {appn.answers.map((a) => (
-                  <li key={a.id}>
-                    {a.question} — <em className="text-on-surface">{a.answer}</em>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {/* Approve / reject buttons. */}
-            <div className="flex gap-2">
-              <Button
-                onClick={() => handleSetStatus(appn.id, "approved")}
-                disabled={updateStatus.isPending}
-              >
-                Approve
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => handleSetStatus(appn.id, "rejected")}
-                disabled={updateStatus.isPending}
-              >
-                Reject
-              </Button>
-            </div>
-
-            {/* Refer: a hospital input + button, scoped to this row. */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Hospital name"
-                value={hospitals[appn.id] || ""}
-                onChange={(e) =>
-                  setHospitals((prev) => ({ ...prev, [appn.id]: e.target.value }))
-                }
-                className="flex-1 rounded-card border border-outline px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-              <Button
-                variant="secondary"
-                onClick={() => handleRefer(appn.id)}
-                disabled={createReferral.isPending}
-              >
-                Refer
-              </Button>
-            </div>
+            <StatusBadge status={appn.status} />
           </Card>
         ))}
       </div>
+
+      {/* The patient detail drawer: opens on a row click, holds every action. Rendered
+          once and driven by `selected` — it returns null while nothing is selected. */}
+      <Drawer
+        open={selected !== null}
+        onClose={closeDrawer}
+        title={
+          selected && (
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">{selected.patient_name}</span>
+              <StatusBadge status={selected.status} />
+            </div>
+          )
+        }
+      >
+        {selected && (
+          <div className="space-y-5">
+            {/* Messaging actions (UI_SPEC §4.2 "Send SMS"/"Contact Patient"). UI-only
+                and disabled for now — there's no backend messaging worker wired yet, so
+                these are placeholders that slot in once it exists. */}
+            <div className="space-y-1">
+              <div className="flex gap-2">
+                <Button variant="secondary" disabled>
+                  Mail
+                </Button>
+                <Button variant="secondary" disabled>
+                  SMS
+                </Button>
+                <Button variant="secondary" disabled>
+                  Call
+                </Button>
+              </div>
+              <p className="text-xs text-on-surface-variant">Coming soon</p>
+            </div>
+
+            {/* Contact info. */}
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-on-surface">Contact</h3>
+              <p className="text-sm text-on-surface-variant">{selected.email}</p>
+              <p className="text-sm text-on-surface-variant">{selected.contact}</p>
+              <p className="text-xs text-on-surface-variant">
+                {selected.trial_id ? `Trial #${selected.trial_id}` : "No trial linked"} ·
+                Submitted {new Date(selected.created_at).toLocaleDateString()}
+              </p>
+            </div>
+
+            {/* Eligibility answers (read-only). */}
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-on-surface">
+                Eligibility answers
+              </h3>
+              {selected.answers.length > 0 ? (
+                <ul className="space-y-1 text-sm text-on-surface-variant">
+                  {selected.answers.map((a) => (
+                    <li key={a.id}>
+                      {a.question} — <em className="text-on-surface">{a.answer}</em>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-on-surface-variant">No answers submitted.</p>
+              )}
+            </div>
+
+            {/* Consent record (UI_SPEC §4.2). The version/timestamp/IP aren't exposed by
+                the current API, so this is a visible placeholder that keeps the §4.2
+                layout — the real data slots into this box later, no relayout needed. */}
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-on-surface">Consent record</h3>
+              <div className="rounded-card border border-dashed border-outline-variant bg-surface-container-low p-3">
+                <p className="text-sm text-on-surface-variant">Not available yet.</p>
+              </div>
+            </div>
+
+            {/* Activity / audit timeline (UI_SPEC §4.2). Same story as Consent: the
+                audit feed isn't exposed to this client yet, so a placeholder holds the
+                spot in the layout. */}
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-on-surface">Activity</h3>
+              <div className="rounded-card border border-dashed border-outline-variant bg-surface-container-low p-3">
+                <p className="text-sm text-on-surface-variant">Not available yet.</p>
+              </div>
+            </div>
+
+            {/* A short status line after an action. */}
+            {notice && <p className="text-sm text-on-surface-variant">{notice}</p>}
+
+            {/* Actions — the only place they appear (UI_SPEC §4.2). */}
+            <div className="space-y-3 border-t border-outline-variant pt-4">
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleSetStatus(selected.id, "approved")}
+                  disabled={updateStatus.isPending}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => handleSetStatus(selected.id, "rejected")}
+                  disabled={updateStatus.isPending}
+                >
+                  Reject
+                </Button>
+              </div>
+
+              {/* Refer: a hospital input + button, scoped to the selected patient.
+                  Gated on approval (UI_SPEC §4.2: "enabled only after approval") —
+                  disabled until the application is approved. The backend also rejects
+                  a premature refer with a 400; this just mirrors that in the UI. */}
+              <div className="space-y-1">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Hospital name"
+                    value={hospital}
+                    onChange={(e) => setHospital(e.target.value)}
+                    disabled={selected.status !== "approved" || createReferral.isPending}
+                    className="flex-1 rounded-card border border-outline px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleRefer(selected.id)}
+                    disabled={selected.status !== "approved" || createReferral.isPending}
+                  >
+                    Refer
+                  </Button>
+                </div>
+                {selected.status !== "approved" && (
+                  <p className="text-xs text-on-surface-variant">
+                    Approve the application before referring.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </Drawer>
     </section>
   );
 }

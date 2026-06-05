@@ -8,6 +8,7 @@
 
 export { default as Button } from "./Button";
 export { default as Card } from "./Card";
+export { default as Drawer } from "./Drawer";
 export { default as StatusBadge } from "./StatusBadge";
 export { default as Spinner } from "./Spinner";
 export { default as AppShell } from "./AppShell";
