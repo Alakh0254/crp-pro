@@ -18,9 +18,12 @@ import models
 
 
 # The closed set of audit actions. It grows ONE entry per slice as we wire audit
-# into more PHI routes — Slice 1 only records reading a single application. Adding
-# a value here is the deliberate gate for "this action is now audited".
-Action = Literal["application.read"]
+# into more PHI routes. Adding a value here is the deliberate gate for "this action
+# is now audited":
+#   - "application.read"  reading ONE application (single record, real entity_id)
+#   - "application.list"  pulling the coordinator inbox (BULK read of patient names,
+#                         which are PHI, so entity_id is None — no single record)
+Action = Literal["application.read", "application.list"]
 
 
 # Write one audit row and commit it, then return it. This is intentionally
@@ -33,7 +36,8 @@ def write_audit(
     actor_id: int | None,
     action: Action,
     entity: str,
-    entity_id: int,
+    # None for BULK reads (e.g. "application.list") that touch no single record.
+    entity_id: int | None,
     ip: str | None,
 ) -> models.AuditLog:
     entry = models.AuditLog(

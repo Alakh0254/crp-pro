@@ -118,9 +118,15 @@ def test_coordinator_lists_applications(client):
     assert r.status_code == 200
     body = r.json()
     assert len(body) == 1
-    assert body[0]["patient_name"] == "Pat Patient"
-    # The nested eligibility answers come back too (ApplicationRead nests them).
-    assert body[0]["answers"][0]["question"] == "Over 18?"
+    row = body[0]
+    # The inbox needs the name + status to triage, so those come through.
+    assert row["patient_name"] == "Pat Patient"
+    assert row["status"] == "new"
+    # PHI minimization: the LIST must NOT carry email, contact, or eligibility
+    # answers — that data only travels on the audited single-read below.
+    assert "email" not in row
+    assert "contact" not in row
+    assert "answers" not in row
 
 
 # --- GET /applications/{id}: read one --------------------------------------
@@ -130,7 +136,13 @@ def test_get_single_application(client):
     token = token_for(client, "coordinator@crp.test", "coord123")
     r = client.get(f"/applications/{app_id}", headers=auth_header(token))
     assert r.status_code == 200
-    assert r.json()["id"] == app_id
+    body = r.json()
+    assert body["id"] == app_id
+    # The single-application read is the audited path, so the full PHI IS present
+    # here (the opposite of the minimized list): email, contact, and answers.
+    assert body["email"] == "pat@example.com"
+    assert body["contact"] == "555-0100"
+    assert body["answers"][0]["question"] == "Over 18?"
 
 
 def test_get_missing_application_is_404(client):
@@ -284,6 +296,34 @@ def test_get_single_application_writes_audit(client):
     # actor_id comes from the logged-in user, not the request.
     assert entry.actor_id == me["id"]
     # The client IP was captured (TestClient reports a host, so this is set).
+    assert entry.ip is not None
+
+
+def test_list_applications_writes_audit(client):
+    # The inbox returns patient names (PHI), so pulling the list is itself a PHI
+    # read and must leave exactly one "application.list" audit row — stamped with
+    # WHO pulled the inbox, but no single entity_id (it's a BULK read, not one record).
+    make_application(client)
+    token = token_for(client, "coordinator@crp.test", "coord123")
+    # The coordinator's own id, to check actor_id is taken from the token.
+    me = client.get("/auth/me", headers=auth_header(token)).json()
+
+    r = client.get("/applications", headers=auth_header(token))
+    assert r.status_code == 200
+
+    db = TestSession()
+    try:
+        entries = db.query(models.AuditLog).all()
+    finally:
+        db.close()
+
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry.action == "application.list"
+    assert entry.entity == "application"
+    # A bulk read touches no single record, so entity_id is None.
+    assert entry.entity_id is None
+    assert entry.actor_id == me["id"]
     assert entry.ip is not None
 
 

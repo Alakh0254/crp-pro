@@ -43,6 +43,21 @@ export interface ApplicationRead {
   answers: EligibilityAnswerRead[];
 }
 
+// The INBOX view of an application — mirrors the backend's ApplicationSummary. The
+// list endpoint (GET /applications) returns these, NOT full records: only the fields
+// the lead inbox shows. It MINIMIZES PHI to name + status — it drops email, contact,
+// and eligibility answers (the bulk of the PHI), which arrive only when one
+// application is opened via getApplication() below. The patient_name it still carries
+// is PHI, so the backend audits the list read too; the detail read is audited per
+// record.
+export interface ApplicationSummary {
+  id: number;
+  patient_name: string;
+  trial_id: number | null;
+  status: string;
+  created_at: string; // ISO string — JSON has no Date type.
+}
+
 // The exact set of statuses a coordinator may set by hand (backend Literal). Typing
 // this as a union means `updateApplicationStatus(token, id, "appoved")` is a compile
 // error, not a runtime 422.
@@ -215,18 +230,40 @@ export async function getCurrentUser(token: string): Promise<UserRead> {
 // "Authorization: Bearer <token>". Unlike login (which posts a FORM body), these
 // send/receive JSON, so they set Content-Type: application/json where there's a body.
 
-// List every application for the coordinator's review table. Hits GET /applications
-// (coordinator/admin only). Returns an array of ApplicationRead objects, each with
-// its nested eligibility answers.
+// List every application for the coordinator's INBOX. Hits GET /applications
+// (coordinator/admin only). Returns an array of ApplicationSummary objects — inbox
+// fields only (id, name, trial, status, created_at), no email/contact/answers. To see
+// a patient's full PHI, open one with getApplication() below.
 export async function listApplications(
   token: string
-): Promise<ApplicationRead[]> {
+): Promise<ApplicationSummary[]> {
   const response = await fetch(`${API_URL}/applications`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
   if (!response.ok) {
     throw new Error(`Could not load applications (${response.status})`);
+  }
+
+  return response.json();
+}
+
+
+// Fetch ONE application in full — the audited single-record read (GET /applications/
+// {id}). Unlike the minimized list above, this returns the complete ApplicationRead:
+// email, contact, and every eligibility answer. The coordinator drawer calls this when
+// a patient is opened, so the full PHI travels only for the one record being viewed —
+// and the backend writes an audit row for that read.
+export async function getApplication(
+  token: string,
+  id: number
+): Promise<ApplicationRead> {
+  const response = await fetch(`${API_URL}/applications/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not load application (${response.status})`);
   }
 
   return response.json();

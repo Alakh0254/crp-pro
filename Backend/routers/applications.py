@@ -74,23 +74,47 @@ def create_application(
 
 
 # GET /applications  → a coordinator (or admin) lists all applications to review.
-# - response_model=list[ApplicationRead]: each row is filtered through the read
-#   schema, so the response is a clean array of applications (no data leaks).
+# - response_model=list[ApplicationSummary]: each row is filtered through the SUMMARY
+#   schema, which MINIMIZES PHI to name + status — it carries only inbox fields
+#   (id, name, trial, status, created_at) and drops the bulk of the PHI (email,
+#   contact, eligibility answers). Those travel only on the audited single-record read
+#   (GET /applications/{id}). Note the list still carries patient_name, which IS PHI,
+#   so this read is itself audited below (a coarse "application.list" row).
 # - The require_role(...) dependency runs FIRST: no valid token -> 401, wrong role
 #   (e.g. a nurse) -> 403. Patients have no token at all, so this stays staff-only.
-@router.get("", response_model=list[schemas.ApplicationRead])
+@router.get("", response_model=list[schemas.ApplicationSummary])
 def list_applications(
+    # Request gives us the client IP to stamp on the audit record. It has no default,
+    # so it sits before the Depends(...) params (which do).
+    request: Request,
     db: Session = Depends(get_db),
-    # We don't use the returned user here, but depending on the guard is what
-    # actually enforces the auth check. The "_" name signals "intentionally unused".
-    _: models.User = Depends(auth.require_role("coordinator", "admin")),
+    # We need the actual user now (not a throwaway "_") so the audit row records WHO
+    # pulled the inbox, taken from the verified token.
+    current_user: models.User = Depends(auth.require_role("coordinator", "admin")),
 ):
     # Newest first so the freshest applications are at the top of the review list.
-    return (
+    applications = (
         db.query(models.Application)
         .order_by(models.Application.created_at.desc())
         .all()
     )
+
+    # The inbox returns patient names (PHI), so a list read is itself a PHI read and
+    # must be audited. It's a BULK read, not one record, so entity_id is None — the
+    # row records WHO pulled the inbox, not which application. This endpoint is
+    # read-only, so there's no commit-coupling concern; write_audit's own commit is
+    # all that's needed. Like the single read, it's fail-closed: if the audit write
+    # raises, the exception propagates and the inbox is never returned.
+    audit.write_audit(
+        db,
+        actor_id=current_user.id,
+        action="application.list",
+        entity="application",
+        entity_id=None,
+        # request.client can be None in some ASGI setups; fall back to no IP then.
+        ip=request.client.host if request.client else None,
+    )
+    return applications
 
 
 # GET /applications/{application_id}  → fetch one application (with its eligibility

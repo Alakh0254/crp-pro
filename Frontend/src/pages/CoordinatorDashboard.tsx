@@ -12,6 +12,7 @@
 import { useState } from "react";
 import {
   useApplications,
+  useApplication,
   useUpdateApplicationStatus,
   useCreateReferral,
 } from "../hooks/queries";
@@ -42,6 +43,13 @@ function CoordinatorDashboard({ token }: CoordinatorDashboardProps) {
   // status after a mutation refetches (e.g. flips to "approved"/"referred"). Null when
   // nothing is selected or the selected row has vanished from the list.
   const selected = applications.find((a) => a.id === selectedId) ?? null;
+
+  // The full record for the open patient — email, contact, eligibility answers — fetched
+  // lazily when the drawer opens (selectedId non-null). The inbox list deliberately
+  // doesn't carry this PHI; we pull it one patient at a time, and the backend audits each
+  // such read. Closed drawer → selectedId null → useApplication stays disabled.
+  const detailQuery = useApplication(token, selectedId);
+  const detail = detailQuery.data;
 
   // Open a row's drawer: select it and clear any per-patient UI from a previous open.
   function openDrawer(id: number) {
@@ -140,9 +148,6 @@ function CoordinatorDashboard({ token }: CoordinatorDashboardProps) {
               <p className="font-semibold text-on-surface">
                 #{appn.id} — {appn.patient_name}
               </p>
-              <p className="text-sm text-on-surface-variant">
-                {appn.email} · {appn.contact}
-              </p>
               <p className="text-xs text-on-surface-variant">
                 Submitted {new Date(appn.created_at).toLocaleDateString()}
               </p>
@@ -186,34 +191,57 @@ function CoordinatorDashboard({ token }: CoordinatorDashboardProps) {
               <p className="text-xs text-on-surface-variant">Coming soon</p>
             </div>
 
-            {/* Contact info. */}
-            <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-on-surface">Contact</h3>
-              <p className="text-sm text-on-surface-variant">{selected.email}</p>
-              <p className="text-sm text-on-surface-variant">{selected.contact}</p>
-              <p className="text-xs text-on-surface-variant">
-                {selected.trial_id ? `Trial #${selected.trial_id}` : "No trial linked"} ·
-                Submitted {new Date(selected.created_at).toLocaleDateString()}
-              </p>
-            </div>
+            {/* Contact + eligibility answers are PHI, so they aren't in the inbox list —
+                we fetch the full record when the drawer opens. Show the load state while
+                that request is in flight, an error if it fails, and the data once here. */}
+            {detailQuery.isLoading && (
+              <div className="flex items-center gap-2 text-on-surface-variant">
+                <Spinner label="Loading patient details" />
+                <span>Loading patient details…</span>
+              </div>
+            )}
 
-            {/* Eligibility answers (read-only). */}
-            <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-on-surface">
-                Eligibility answers
-              </h3>
-              {selected.answers.length > 0 ? (
-                <ul className="space-y-1 text-sm text-on-surface-variant">
-                  {selected.answers.map((a) => (
-                    <li key={a.id}>
-                      {a.question} — <em className="text-on-surface">{a.answer}</em>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-on-surface-variant">No answers submitted.</p>
-              )}
-            </div>
+            {detailQuery.isError && (
+              <p className="text-sm text-error">
+                Could not load patient details. Close and reopen to try again.
+              </p>
+            )}
+
+            {detail && (
+              <>
+                {/* Contact info (from the full record). */}
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-on-surface">Contact</h3>
+                  <p className="text-sm text-on-surface-variant">{detail.email}</p>
+                  <p className="text-sm text-on-surface-variant">{detail.contact}</p>
+                  <p className="text-xs text-on-surface-variant">
+                    {detail.trial_id ? `Trial #${detail.trial_id}` : "No trial linked"} ·
+                    Submitted {new Date(detail.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+
+                {/* Eligibility answers (read-only). */}
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-on-surface">
+                    Eligibility answers
+                  </h3>
+                  {detail.answers.length > 0 ? (
+                    <ul className="space-y-1 text-sm text-on-surface-variant">
+                      {detail.answers.map((a) => (
+                        <li key={a.id}>
+                          {a.question} —{" "}
+                          <em className="text-on-surface">{a.answer}</em>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-on-surface-variant">
+                      No answers submitted.
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Consent record (UI_SPEC §4.2). The version/timestamp/IP aren't exposed by
                 the current API, so this is a visible placeholder that keeps the §4.2

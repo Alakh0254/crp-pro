@@ -183,8 +183,11 @@ class AuditLog(Base):
     # WHICH kind of thing was touched ("application", "referral", ...) and its id.
     # Kept as plain strings/ints rather than a real FK so the audit row survives
     # even if the referenced row is later removed — the trail must never break.
+    # entity_id is nullable because some audited actions are BULK reads with no
+    # single record — e.g. "application.list" records that the inbox was pulled,
+    # not one application id — and those store entity_id=None.
     entity = Column(String, nullable=False)
-    entity_id = Column(Integer, nullable=False)
+    entity_id = Column(Integer, nullable=True)
 
     # WHERE the request came from. Nullable because we can't always resolve a
     # client IP (e.g. an internal/test call). The IP is itself PHI ("IP-linked

@@ -52,6 +52,25 @@ class ApplicationRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# OUTPUT: the INBOX view of an application — deliberately minimal. The coordinator's
+# lead list (GET /applications) returns many rows at once, so it sends only what the
+# inbox needs to triage: the id, the patient's name, the linked trial, the workflow
+# status, and when it arrived. It MINIMIZES PHI to name + status — it drops the bulk
+# (email, phone/contact, and every eligibility answer) so that data never travels just
+# to render a list. The patient_name it does carry is still PHI, so the list read is
+# itself audited server-side. To see the rest, the coordinator opens one application
+# (GET /applications/{id}), which returns the full ApplicationRead and writes a
+# per-record audit row.
+class ApplicationSummary(BaseModel):
+    id: int
+    patient_name: str
+    trial_id: int | None
+    status: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # OUTPUT: what POST /auth/login sends back after a successful login.
 # This shape ("access_token" + "token_type") is the OAuth2 standard, which is
 # what makes the /docs "Authorize" button understand the response automatically.

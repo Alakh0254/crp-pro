@@ -18,6 +18,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   listApplications,
+  getApplication,
   updateApplicationStatus,
   createReferral,
   listReferrals,
@@ -29,6 +30,7 @@ import {
   updateUserStatus,
   updateTrialStatus,
   type ApplicationRead,
+  type ApplicationSummary,
   type ApplicationStatus,
   type ReferralDetailRead,
   type ReferralStatus,
@@ -44,12 +46,26 @@ import {
 // they need: `data` (the rows, `undefined` until loaded), `isLoading`, `isError`.
 // `enabled: !!token` keeps the query from running before a token exists.
 
-// Coordinator/admin: every application, with nested eligibility answers.
+// Coordinator/admin: the lead INBOX — a minimized summary per application (no
+// email/contact/answers). The full record for one patient comes from useApplication.
 export function useApplications(token: string | null) {
-  return useQuery<ApplicationRead[]>({
+  return useQuery<ApplicationSummary[]>({
     queryKey: ["applications", token],
     queryFn: () => listApplications(token as string),
     enabled: !!token,
+  });
+}
+
+// Coordinator/admin: ONE application in full (email, contact, eligibility answers),
+// fetched when the drawer opens. Its OWN ["application", id, token] namespace — kept
+// separate from the ["applications"] inbox list, so opening a patient never refetches
+// the whole inbox and invalidating one list never touches the other. `enabled` gates
+// it on a token AND a selected id, so it stays idle while the drawer is closed (id null).
+export function useApplication(token: string | null, id: number | null) {
+  return useQuery<ApplicationRead>({
+    queryKey: ["application", id, token],
+    queryFn: () => getApplication(token as string, id as number),
+    enabled: !!token && id !== null,
   });
 }
 
@@ -184,6 +200,7 @@ export function useUpdateTrialStatus(token: string | null) {
 // `import { useApplications, type ApplicationRead } from "../hooks/queries"`.
 export type {
   ApplicationRead,
+  ApplicationSummary,
   ReferralDetailRead,
   TrialRead,
   UserRead,
