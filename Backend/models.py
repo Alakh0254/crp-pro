@@ -30,7 +30,7 @@ class User(Base):
 
     # When the row was created. We pass the function (no parentheses) so SQLAlchemy
     # calls it at insert time, giving each row its own timestamp.
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
 class Application(Base):
@@ -56,7 +56,7 @@ class Application(Base):
     status = Column(String, nullable=False, default="new")
 
     # When the application was submitted — copy this from your User class.
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     # The Python-side link to this application's eligibility answers.
     # - "EligibilityAnswer": the class on the other end of the link.
@@ -119,7 +119,7 @@ class Referral(Base):
     status = Column(String, nullable=False, default="referred")
 
     # When the referral was made — same timestamp pattern as the other tables.
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     # Python-side link to the referred application, so the nurse flow can read the
     # patient's details (name, contact, eligibility answers) straight off the
@@ -155,7 +155,7 @@ class Trial(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     # When the trial was created — same timestamp pattern as the other tables.
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
 class AuditLog(Base):
@@ -195,5 +195,5 @@ class AuditLog(Base):
     ip = Column(String, nullable=True)
 
     # WHEN it happened — same UTC timestamp pattern as the other tables.
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
