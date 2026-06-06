@@ -129,8 +129,11 @@ interface TokenResponse {
   token_type: string;
 }
 
-// The base address of the FastAPI server during local development.
-const API_URL = "http://localhost:8000";
+// The base address of the FastAPI server. Read from VITE_API_URL so a deploy can
+// point the frontend at a different backend without a code change; Vite inlines
+// VITE_* vars at build time. The ?? fallback keeps the old localhost behaviour
+// when the variable is unset (e.g. a plain `npm run dev` with no .env).
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 // Send a new patient application to the backend.
 //

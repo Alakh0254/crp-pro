@@ -4,6 +4,7 @@ from fastapi import FastAPI
 # (our React dev server) is BLOCKED from fetching localhost:8000 (this API),
 # because they are different origins. This is a browser security rule (CORS).
 from fastapi.middleware.cors import CORSMiddleware
+import config
 import models
 from database import engine
 # Our routers: applications (public patient form + coordinator review), auth
@@ -20,9 +21,10 @@ app = FastAPI()
 # Turn on CORS so the React app is allowed to talk to this API from the browser.
 app.add_middleware(
     CORSMiddleware,
-    # Only requests coming FROM this exact origin are allowed. The Vite dev
-    # server runs here by default. (For deployment we'd add the real site URL.)
-    allow_origins=["http://localhost:5173"],
+    # Only requests coming FROM these origins are allowed. Sourced from config
+    # (default: the Vite dev server); set CORS_ORIGINS in the env to add the real
+    # site URL for deployment — comma-separated for more than one.
+    allow_origins=config.CORS_ORIGINS,
     # Allow cookies/auth headers to ride along on requests (harmless now, needed
     # once we add login in Phase 3).
     allow_credentials=True,

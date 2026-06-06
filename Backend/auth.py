@@ -2,8 +2,6 @@
 # the dependencies that protect routes. Everything security-related lives here so
 # the rest of the app can just say "give me the current user" without caring how.
 
-# os: lets us read environment variables (so the secret key isn't hardcoded).
-import os
 # hmac + hashlib: the standard-library crypto we use to SIGN our JWTs (HS256 is
 # literally HMAC with SHA-256). hmac.compare_digest also gives us a timing-safe
 # comparison so attackers can't guess the signature byte-by-byte.
@@ -35,6 +33,8 @@ from fastapi.security import OAuth2PasswordBearer
 # Session is just the type of the DB connection get_db hands us (for the hint).
 from sqlalchemy.orm import Session
 
+# Environment-driven settings (SECRET_KEY, token lifetime) live in config.py.
+import config
 # Our per-request DB session dependency and the ORM models.
 from database import get_db
 import models
@@ -42,17 +42,20 @@ import models
 
 # --- Configuration ---------------------------------------------------------
 
-# The secret used to sign tokens. NEVER hardcode real secrets — read it from the
-# environment, with a throwaway default for local dev only. (SDLC_PLAN.md: secrets
-# via env vars.) On a real deployment you'd set SECRET_KEY to a long random value.
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-change-me")
+# The secret used to sign tokens. NEVER hardcode real secrets — config.py resolves
+# it from the environment once (and refuses to start outside dev if it's unset),
+# so we just read the result here. We keep a module-level alias so the rest of
+# this file (and tests) can refer to auth.SECRET_KEY as before.
+SECRET_KEY = config.SECRET_KEY
 
 # The signing algorithm name we advertise in the JWT header. HS256 = HMAC-SHA256.
+# This is a PROTOCOL constant — it describes how _sign() works, not a per-deploy
+# setting — so it stays hardcoded here rather than living in config.
 ALGORITHM = "HS256"
 
 # How long a login stays valid. After this, the token is rejected and you log in
-# again. 60 minutes is a sane default for a learning app.
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+# again. Sourced from config (default 60 min) so prod can shorten it via the env.
+ACCESS_TOKEN_EXPIRE_MINUTES = config.ACCESS_TOKEN_EXPIRE_MINUTES
 
 
 # --- Password hashing ------------------------------------------------------

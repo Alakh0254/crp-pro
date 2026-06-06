@@ -15,6 +15,9 @@ idna==3.17
 # standard library (hmac/hashlib) in auth.py, so python-jose is intentionally not
 # a dependency here — swap to bcrypt/jose later if desired.
 passlib==1.7.4
+# Loads Backend/.env into the process environment at startup so config.py can read
+# settings (SECRET_KEY, DATABASE_URL, ...) from a git-ignored file in dev.
+python-dotenv==1.0.0
 # Lets FastAPI read form fields (username/password) for the OAuth2 login route.
 python-multipart==0.0.29
 pydantic==2.13.4
