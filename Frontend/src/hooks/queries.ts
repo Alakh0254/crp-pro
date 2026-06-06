@@ -22,6 +22,7 @@ import {
   updateApplicationStatus,
   createReferral,
   listReferrals,
+  getReferral,
   updateReferralStatus,
   createTrial,
   listTrials,
@@ -33,6 +34,7 @@ import {
   type ApplicationSummary,
   type ApplicationStatus,
   type ReferralDetailRead,
+  type ReferralSummary,
   type ReferralStatus,
   type TrialRead,
   type TrialStatus,
@@ -69,12 +71,27 @@ export function useApplication(token: string | null, id: number | null) {
   });
 }
 
-// Nurse: referred patients, each with their full application nested inside.
+// Nurse: the referral INBOX — a minimized summary per referral (nested patient is
+// name + status only, no email/contact/answers). The full record for one comes from
+// useReferral.
 export function useReferrals(token: string | null) {
-  return useQuery<ReferralDetailRead[]>({
+  return useQuery<ReferralSummary[]>({
     queryKey: ["referrals", token],
     queryFn: () => listReferrals(token as string),
     enabled: !!token,
+  });
+}
+
+// Nurse: ONE referral in full (nested patient's email, contact, eligibility answers),
+// fetched when the drawer opens. Its OWN ["referral", id, token] namespace — kept
+// separate from the ["referrals"] inbox list, so opening a patient never refetches the
+// whole inbox and invalidating one list never touches the other. `enabled` gates it on
+// a token AND a selected id, so it stays idle while the drawer is closed (id null).
+export function useReferral(token: string | null, id: number | null) {
+  return useQuery<ReferralDetailRead>({
+    queryKey: ["referral", id, token],
+    queryFn: () => getReferral(token as string, id as number),
+    enabled: !!token && id !== null,
   });
 }
 
@@ -202,6 +219,7 @@ export type {
   ApplicationRead,
   ApplicationSummary,
   ReferralDetailRead,
+  ReferralSummary,
   TrialRead,
   UserRead,
 } from "../api";

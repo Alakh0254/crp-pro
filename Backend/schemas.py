@@ -146,6 +146,28 @@ class ReferralDetailRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# OUTPUT: the INBOX view of a referral — the minimized parallel to ReferralDetailRead,
+# the same idea as ApplicationSummary vs ApplicationRead. The nurse's follow-up list
+# (GET /referrals) returns many rows at once, so it nests the patient as an
+# ApplicationSummary (id, name, trial, status, created_at) — NOT the full ApplicationRead.
+# It MINIMIZES PHI: the nested patient drops email, contact, and every eligibility answer,
+# so that bulk PHI never travels just to render the list. The patient_name it does carry
+# is still PHI, so the list read is itself audited server-side. To see the rest, the nurse
+# opens one referral (GET /referrals/{id}), which returns the full ReferralDetailRead and
+# writes a per-record audit row.
+class ReferralSummary(BaseModel):
+    id: int
+    application_id: int
+    hospital: str
+    referred_by: int
+    status: str
+    created_at: datetime
+    # The referred patient, shaped by the MINIMAL ApplicationSummary (name + status only).
+    application: ApplicationSummary
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # INPUT: what a nurse sends to record follow-up on a referral. Like
 # ApplicationStatusUpdate, the Literal pins the status to the values a nurse may
 # set — "referred" is the starting state (set by the referrals POST), so it's not

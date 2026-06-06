@@ -23,7 +23,16 @@ import models
 #   - "application.read"  reading ONE application (single record, real entity_id)
 #   - "application.list"  pulling the coordinator inbox (BULK read of patient names,
 #                         which are PHI, so entity_id is None — no single record)
-Action = Literal["application.read", "application.list"]
+#   - "referral.read"     reading ONE referral with its nested patient PHI
+#                         (single record, real entity_id)
+#   - "referral.list"     pulling the nurse's referral inbox (BULK read of patient
+#                         names via the nested summary — PHI — so entity_id is None)
+Action = Literal[
+    "application.read",
+    "application.list",
+    "referral.read",
+    "referral.list",
+]
 
 
 # Write one audit row and commit it, then return it. This is intentionally

@@ -289,10 +289,15 @@ def test_nurse_lists_referrals_with_nested_application(client):
     body = r.json()
     assert len(body) == 1
     assert body[0]["status"] == "referred"
-    # The nurse needs to see WHO was referred without a second request: the patient
-    # application (and its eligibility answers) is nested in the referral.
-    assert body[0]["application"]["patient_name"] == "Pat Patient"
-    assert body[0]["application"]["answers"][0]["question"] == "Over 18?"
+    # The nurse sees WHO was referred from the MINIMIZED nested patient (name + status
+    # only). The bulk PHI — email, contact, eligibility answers — is no longer in the
+    # list; it travels only on the audited single read (GET /referrals/{id}). See
+    # test_referrals.py for the full minimization + audit coverage.
+    nested = body[0]["application"]
+    assert nested["patient_name"] == "Pat Patient"
+    assert "answers" not in nested
+    assert "email" not in nested
+    assert "contact" not in nested
 
 
 def test_coordinator_cannot_list_referrals(client):

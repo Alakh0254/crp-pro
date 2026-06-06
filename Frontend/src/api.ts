@@ -87,6 +87,21 @@ export interface ReferralDetailRead extends ReferralRead {
   application: ApplicationRead;
 }
 
+// The INBOX view of a referral — mirrors the backend's ReferralSummary. The list
+// endpoint (GET /referrals) returns these, NOT full records: each nests the patient as
+// the MINIMAL ApplicationSummary (name + status), dropping email/contact/answers. The
+// bulk PHI arrives only when one referral is opened via getReferral() below. The
+// patient_name it still carries is PHI, so the backend audits the list read too.
+export interface ReferralSummary {
+  id: number;
+  application_id: number;
+  hospital: string;
+  referred_by: number;
+  status: string;
+  created_at: string;
+  application: ApplicationSummary;
+}
+
 // The statuses a nurse may set when recording follow-up (backend Literal).
 export type ReferralStatus = "contacted" | "enrolled" | "declined";
 
@@ -328,17 +343,39 @@ export async function createReferral(
 // allows only nurse/admin here, so a coordinator's token gets a 403.
 
 // List referred patients for the nurse to follow up on. Hits GET /referrals.
-// Returns an array of ReferralDetailRead objects — each referral has its full
-// patient `application` (name, contact, eligibility answers) nested inside it.
+// Returns an array of ReferralSummary objects — inbox fields only, each nesting the
+// MINIMAL patient summary (name + status), no email/contact/answers. To see a
+// patient's full PHI, open one with getReferral() below.
 export async function listReferrals(
   token: string
-): Promise<ReferralDetailRead[]> {
+): Promise<ReferralSummary[]> {
   const response = await fetch(`${API_URL}/referrals`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
   if (!response.ok) {
     throw new Error(`Could not load referrals (${response.status})`);
+  }
+
+  return response.json();
+}
+
+
+// Fetch ONE referral in full — the audited single-record read (GET /referrals/{id}).
+// Unlike the minimized list above, this returns the complete ReferralDetailRead: the
+// nested patient's email, contact, and every eligibility answer. The nurse drawer calls
+// this when a patient is opened, so the full PHI travels only for the one record being
+// viewed — and the backend writes an audit row for that read.
+export async function getReferral(
+  token: string,
+  id: number
+): Promise<ReferralDetailRead> {
+  const response = await fetch(`${API_URL}/referrals/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not load referral (${response.status})`);
   }
 
   return response.json();

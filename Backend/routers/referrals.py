@@ -5,7 +5,7 @@
 # APIRouter groups these routes; Depends injects the DB and the role guard.
 # HTTPException + status let us return 404 (no such application) and 400 (the
 # application isn't approved yet) with the right HTTP codes.
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 # The type of the DB session (for the hint).
 from sqlalchemy.orm import Session
@@ -18,6 +18,8 @@ import schemas
 # auth.require_role is the Phase 3 role guard; auth.get_current_user is used
 # indirectly through it. We read the logged-in user to stamp "referred_by".
 import auth
+# audit.write_audit records PHI access to the append-only audit trail.
+import audit
 
 
 # A mini-app for everything under /referrals. tags=["referrals"] groups it in /docs.
@@ -77,20 +79,92 @@ def create_referral(
 
 
 # GET /referrals  → a nurse (or admin) lists referred patients to follow up on.
-# response_model=list[ReferralDetailRead] nests each referral's patient application
-# (name, contact, eligibility answers) so the nurse sees WHO was referred without a
-# second request. The require_role guard runs FIRST: no token -> 401, wrong role
-# (e.g. a coordinator) -> 403. Newest first, like the applications list.
-@router.get("", response_model=list[schemas.ReferralDetailRead])
+# response_model=list[ReferralSummary] nests each referral's patient as the MINIMAL
+# ApplicationSummary (name + status only) — it drops the bulk PHI (email, contact,
+# eligibility answers), which now travels only on the audited single read below
+# (GET /referrals/{id}). The list still carries patient_name, which IS PHI, so this
+# read is itself audited (a coarse "referral.list" row). The require_role guard runs
+# FIRST: no token -> 401, wrong role (e.g. a coordinator) -> 403. Newest first.
+@router.get("", response_model=list[schemas.ReferralSummary])
 def list_referrals(
+    # Request gives us the client IP to stamp on the audit record. It has no default,
+    # so it sits before the Depends(...) params (which do).
+    request: Request,
     db: Session = Depends(get_db),
-    _: models.User = Depends(auth.require_role("nurse", "admin")),
+    # We need the actual user now (not a throwaway "_") so the audit row records WHO
+    # pulled the referral inbox, taken from the verified token.
+    current_user: models.User = Depends(auth.require_role("nurse", "admin")),
 ):
-    return (
+    referrals = (
         db.query(models.Referral)
         .order_by(models.Referral.created_at.desc())
         .all()
     )
+
+    # The inbox returns patient names (PHI), so a list read is itself a PHI read and
+    # must be audited. It's a BULK read, not one record, so entity_id is None — the
+    # row records WHO pulled the inbox, not which referral. Read-only, so write_audit's
+    # own commit is all that's needed. Fail-closed like the applications inbox: if the
+    # audit write raises, the exception propagates and the inbox is never returned.
+    audit.write_audit(
+        db,
+        actor_id=current_user.id,
+        action="referral.list",
+        entity="referral",
+        entity_id=None,
+        # request.client can be None in some ASGI setups; fall back to no IP then.
+        ip=request.client.host if request.client else None,
+    )
+    return referrals
+
+
+# GET /referrals/{referral_id}  → a nurse (or admin) opens ONE referral in full — the
+# audited single-record read. Unlike the minimized list above, this returns the full
+# ReferralDetailRead: the nested patient's email, contact, and every eligibility answer.
+# The nurse drawer calls this when a patient is opened, so the bulk PHI travels only for
+# the one record being viewed, and we write a per-record audit row for that read.
+@router.get("/{referral_id}", response_model=schemas.ReferralDetailRead)
+def get_referral(
+    referral_id: int,
+    # Request gives us the client IP to stamp on the audit record. It has no default,
+    # so it sits before the Depends(...) params (which do).
+    request: Request,
+    db: Session = Depends(get_db),
+    # We need the actual user now (not a throwaway "_") so the audit row records WHO
+    # read this patient's PHI, taken from the verified token.
+    current_user: models.User = Depends(auth.require_role("nurse", "admin")),
+):
+    referral = (
+        db.query(models.Referral)
+        .filter(models.Referral.id == referral_id)
+        .first()
+    )
+    # No row with that id -> 404 Not Found. This check runs BEFORE the audit write, so a
+    # miss leaves no audit row (we only record an actual PHI read of a real referral).
+    if referral is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Referral not found"
+        )
+
+    # Deferred ownership: any nurse can currently open any referral — there's no
+    # per-nurse assignment on the model yet (referrals carry referred_by, the
+    # coordinator, not an assigned nurse). When that lands, scope this read to the
+    # owning nurse (404, not 403, to avoid leaking existence) the same way. For now
+    # the guard is role-only, matching GET /applications/{id}.
+    #
+    # Record the PHI read BEFORE returning. write_audit is fail-closed: if it raises,
+    # the exception propagates and the patient's data is never sent back — an
+    # unauditable PHI access must not succeed.
+    audit.write_audit(
+        db,
+        actor_id=current_user.id,
+        action="referral.read",
+        entity="referral",
+        entity_id=referral.id,
+        # request.client can be None in some ASGI setups; fall back to no IP then.
+        ip=request.client.host if request.client else None,
+    )
+    return referral
 
 
 # PATCH /referrals/{referral_id}  → a nurse records follow-up by moving a referral
