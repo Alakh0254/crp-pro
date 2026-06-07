@@ -1,0 +1,11 @@
+# Keep the build context small and secret-free: deps are reinstalled inside the
+# image, build output is regenerated, and .env / logs / VCS must never enter it.
+node_modules
+dist
+.env
+.env.*
+*.log
+.git
+Dockerfile
+.dockerignore
+stitch_crp_pro_ui_design_spec
