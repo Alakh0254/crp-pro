@@ -1,0 +1,65 @@
+# Local dev orchestration for the whole stack: Postgres + FastAPI backend + React frontend.
+#
+# The Postgres password below (crp_dev_only_pw) is a dev-only local non-secret. It is
+# shared between the db and backend services purely so they agree on credentials on a
+# throwaway local database. Real secrets — SECRET_KEY, prod DB creds, SMS/email keys —
+# are NEVER committed here; they come from the environment / a managed secret store.
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      # These three seed the local database on first boot. POSTGRES_PASSWORD is the
+      # dev-only value referenced in the header — fine to commit, never reused in prod.
+      POSTGRES_USER: crp
+      POSTGRES_PASSWORD: crp_dev_only_pw
+      POSTGRES_DB: crp
+    volumes:
+      # Named volume so the database survives `docker compose down` and rebuilds.
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      # Host 5433 avoids clashing with a native host Postgres on the usual 5432;
+      # containers still talk to each other over the internal 5432 (see backend).
+      - "5433:5432"
+    healthcheck:
+      # Backend waits on this (depends_on: service_healthy) so it never races a
+      # not-yet-accepting database on startup.
+      test: ["CMD-SHELL", "pg_isready -U crp -d crp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./Backend
+    depends_on:
+      db:
+        # Don't start the backend until Postgres passes its healthcheck above.
+        condition: service_healthy
+    environment:
+      APP_ENV: dev
+      # Host is the compose service name `db` on the internal network port 5432 —
+      # NOT the host-published 5433. Containers reach each other by service name.
+      DATABASE_URL: postgresql+psycopg2://crp:crp_dev_only_pw@db:5432/crp
+      # The browser origin the frontend is served from; listing it here keeps the
+      # login (and all API) requests from being blocked by CORS.
+      CORS_ORIGINS: http://localhost:8080
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./Frontend
+      args:
+        # Vite inlines this at BUILD time into JS that runs in the user's browser, so
+        # it must be the browser-reachable host port (http://localhost:8000), NOT the
+        # internal compose name `backend` — the browser can't resolve that.
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "8080:8080"
+    depends_on:
+      # Start-ordering only — the backend has no healthcheck, so this just nudges
+      # backend to start first; it does not wait for it to be ready.
+      - backend
+
+volumes:
+  pgdata:
