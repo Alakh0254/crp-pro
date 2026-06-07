@@ -1,0 +1,25 @@
+# Keep PHI and secrets OUT of the build context / image.
+#   *.db  -> SQLite databases contain PHI (patient PII + eligibility answers)
+#   .env  -> runtime secrets (SECRET_KEY, DATABASE_URL); injected at runtime, never baked
+# Everything below is excluded from `docker build` so it can never enter a layer.
+
+# Local virtualenv — rebuilt inside the image from requirements.txt
+.venv
+
+# Python bytecode caches (recursive: also nested ones like routers/__pycache__)
+**/__pycache__
+
+# PHI: SQLite databases (app.db, test_*.db) must never be copied into the image
+*.db
+
+# Secret: real environment file. .env.example is kept on purpose as a template.
+.env
+
+# Dev-only seeder: ships hardcoded credentials (admin123/coord123/nurse123).
+# Must never be present in the image — it would bake known logins into prod.
+seed_users.py
+
+# Test artifacts and suite — not needed in the runtime image
+.pytest_cache
+tests
+conftest.py
