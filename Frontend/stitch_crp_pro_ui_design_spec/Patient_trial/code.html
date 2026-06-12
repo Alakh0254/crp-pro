@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<!--
+  CRP-Pro — PATIENT-FACING TRIAL PAGES (mockup / design reference)
+  ================================================================
+  This single file contains TWO patient screens, stacked one after the other so you can
+  see both in one scroll (in the real app they are separate routes):
+
+     SCREEN 1  →  Trial list / landing      (route: "/"  or  "/trials")
+     SCREEN 2  →  Trial detail              (route: "/trials/{slug}")
+
+  This is a STATIC mockup with hard-coded sample data — the same role the other files in
+  stitch_crp_pro_ui_design_spec/ play. The React port will replace the sample cards with
+  data from the backend and wire the "Apply" button to the existing patient application form.
+
+  Design: follows clinical_trust_protocol/DESIGN.md exactly — Medical Teal (#00626a),
+  Inter, soft 8px/12px radii, Level-1 ambient shadow, pill status badges. Patient view is
+  mobile-first and uses the larger body-lg (18px) text for readability, per DESIGN.md.
+
+  NOTE for the React port:
+    - No sidebar / no login on these pages — they are PUBLIC. A patient must never be
+      nudged toward the staff area.
+    - Trial list shows: name + condition, short blurb, status badge, location, "View details".
+    - Trial detail shows: full description, eligibility points, status, site/location, and a
+      prominent "Apply" button that routes to the patient application form for THIS trial.
+    - Closed trials show a disabled, non-clickable apply state.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CRP-Pro — Clinical Trials</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
+<style>
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  body { font-family: 'Inter', sans-serif; }
+</style>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          surface: '#faf8ff',
+          'surface-container-lowest': '#ffffff',
+          'surface-container-low': '#f2f3ff',
+          'surface-container': '#eaedff',
+          'on-surface': '#131b2e',
+          'on-surface-variant': '#3e494a',
+          outline: '#6e797a',
+          'outline-variant': '#bdc9ca',
+          primary: '#00626a',
+          'on-primary': '#ffffff',
+          'primary-container': '#0e7c86',
+          'on-primary-container': '#ddfbff',
+          secondary: '#0051d5',
+          error: '#ba1a1a',
+          'error-container': '#ffdad6',
+          'on-error-container': '#93000a',
+          background: '#faf8ff',
+        },
+        borderRadius: { card: '0.5rem', xl: '0.75rem', pill: '9999px' },
+        boxShadow: { card: '0px 4px 12px rgba(15,23,42,0.05)' },
+      }
+    }
+  }
+</script>
+</head>
+<body class="bg-background text-on-surface">
+
+<!-- ============================================================= -->
+<!-- SHARED: a slim public top bar (logo only — NO staff links).    -->
+<!-- ============================================================= -->
+<header class="border-b border-outline-variant bg-surface-container-lowest">
+  <div class="mx-auto flex max-w-3xl items-center gap-3 px-4 py-4">
+    <span class="material-symbols-outlined text-[28px] text-primary">clinical_notes</span>
+    <div>
+      <h1 class="text-xl font-bold leading-none text-primary">CRP-Pro</h1>
+      <p class="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">Clinical Excellence</p>
+    </div>
+  </div>
+</header>
+
+
+<!-- ============================================================= -->
+<!-- SCREEN 1 — TRIAL LIST  (route: "/" or "/trials")               -->
+<!-- ============================================================= -->
+<main class="mx-auto max-w-3xl px-4 py-8">
+
+  <!-- Intro / hero. Warm, plain-language, reassuring (DESIGN.md "sterile but warm"). -->
+  <section class="mb-8">
+    <h2 class="text-3xl font-bold tracking-tight text-on-surface">Find a clinical trial</h2>
+    <p class="mt-2 text-lg text-on-surface-variant">
+      Browse the studies currently enrolling. Open a trial to read what it involves and who
+      can take part, then apply if it’s a fit. Applying takes a few minutes.
+    </p>
+  </section>
+
+  <!-- The list of trials. Each is a card; the whole card links to the detail page. -->
+  <section class="space-y-4">
+
+    <!-- Trial card — OPEN -->
+    <a href="#detail" class="block rounded-xl border border-outline-variant bg-surface-container-lowest p-5 shadow-card transition-colors hover:border-primary">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h3 class="text-lg font-semibold text-on-surface">Type 2 Diabetes — Blood Sugar Study</h3>
+          <p class="mt-0.5 text-sm font-medium text-primary">Condition: Type 2 Diabetes</p>
+        </div>
+        <!-- Status badge: pill, subtle-fill (DESIGN.md) -->
+        <span class="shrink-0 rounded-pill bg-primary-container/10 px-3 py-1 text-xs font-bold text-primary-container">Open</span>
+      </div>
+      <p class="mt-3 text-base text-on-surface-variant">
+        A 12-week study testing a new once-daily tablet that helps the body manage blood sugar.
+      </p>
+      <div class="mt-4 flex items-center justify-between">
+        <span class="flex items-center gap-1 text-sm text-on-surface-variant">
+          <span class="material-symbols-outlined text-[18px]">location_on</span>
+          City General Hospital, Pune
+        </span>
+        <span class="flex items-center gap-1 text-sm font-medium text-primary">
+          View details
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+        </span>
+      </div>
+    </a>
+
+    <!-- Trial card — OPEN -->
+    <a href="#detail" class="block rounded-xl border border-outline-variant bg-surface-container-lowest p-5 shadow-card transition-colors hover:border-primary">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h3 class="text-lg font-semibold text-on-surface">Migraine Prevention Trial</h3>
+          <p class="mt-0.5 text-sm font-medium text-primary">Condition: Chronic Migraine</p>
+        </div>
+        <span class="shrink-0 rounded-pill bg-primary-container/10 px-3 py-1 text-xs font-bold text-primary-container">Open</span>
+      </div>
+      <p class="mt-3 text-base text-on-surface-variant">
+        Testing whether a monthly injection reduces the number of migraine days each month.
+      </p>
+      <div class="mt-4 flex items-center justify-between">
+        <span class="flex items-center gap-1 text-sm text-on-surface-variant">
+          <span class="material-symbols-outlined text-[18px]">location_on</span>
+          Sunrise Medical Centre, Mumbai
+        </span>
+        <span class="flex items-center gap-1 text-sm font-medium text-primary">
+          View details
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+        </span>
+      </div>
+    </a>
+
+    <!-- Trial card — CLOSED (greyed, still readable, badge in a muted tone) -->
+    <a href="#detail" class="block rounded-xl border border-outline-variant bg-surface-container-low p-5 shadow-card transition-colors hover:border-outline">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h3 class="text-lg font-semibold text-on-surface-variant">Asthma Inhaler Comparison</h3>
+          <p class="mt-0.5 text-sm font-medium text-on-surface-variant">Condition: Adult Asthma</p>
+        </div>
+        <span class="shrink-0 rounded-pill bg-on-surface-variant/10 px-3 py-1 text-xs font-bold text-on-surface-variant">Closed</span>
+      </div>
+      <p class="mt-3 text-base text-on-surface-variant">
+        Enrolment for this study has closed. Browse the open trials above.
+      </p>
+      <div class="mt-4 flex items-center justify-between">
+        <span class="flex items-center gap-1 text-sm text-on-surface-variant">
+          <span class="material-symbols-outlined text-[18px]">location_on</span>
+          City General Hospital, Pune
+        </span>
+        <span class="flex items-center gap-1 text-sm font-medium text-on-surface-variant">
+          View details
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+        </span>
+      </div>
+    </a>
+
+  </section>
+
+  <!-- Empty-state note for the React port (shown when no trials are open). -->
+  <!--
+    <p class="mt-6 text-center text-on-surface-variant">No trials are open right now. Please check back soon.</p>
+  -->
+</main>
+
+
+<!-- divider just to separate the two screens in this mockup file -->
+<div class="mx-auto my-4 max-w-3xl border-t-2 border-dashed border-outline-variant px-4">
+  <p class="py-2 text-center text-xs uppercase tracking-widest text-on-surface-variant">↓ Screen 2 — Trial detail (separate route) ↓</p>
+</div>
+
+
+<!-- ============================================================= -->
+<!-- SCREEN 2 — TRIAL DETAIL  (route: "/trials/{slug}")             -->
+<!-- ============================================================= -->
+<main id="detail" class="mx-auto max-w-3xl px-4 py-8">
+
+  <!-- Back link to the list. -->
+  <a href="#" class="mb-6 inline-flex items-center gap-1 text-sm font-medium text-on-surface-variant transition-colors hover:text-primary">
+    <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+    All trials
+  </a>
+
+  <!-- Title block: name, condition, status. -->
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight text-on-surface">Type 2 Diabetes — Blood Sugar Study</h2>
+      <p class="mt-1 text-lg font-medium text-primary">Condition: Type 2 Diabetes</p>
+    </div>
+    <span class="mt-1 shrink-0 rounded-pill bg-primary-container/10 px-3 py-1 text-xs font-bold text-primary-container">Open</span>
+  </div>
+
+  <!-- Site / location strip. -->
+  <div class="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-on-surface-variant">
+    <span class="flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-[18px]">location_on</span>
+      City General Hospital, Pune
+    </span>
+    <span class="flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-[18px]">schedule</span>
+      About 12 weeks
+    </span>
+  </div>
+
+  <!-- About / full description. -->
+  <section class="mt-8">
+    <h3 class="text-xl font-semibold text-on-surface">About this study</h3>
+    <p class="mt-2 text-lg leading-relaxed text-on-surface-variant">
+      This study is testing a new once-daily tablet designed to help the body manage blood
+      sugar more effectively. Over about 12 weeks you’ll have regular check-ups with the study
+      team, who will monitor your health throughout. The aim is to learn whether the tablet
+      improves blood sugar control compared with current treatments.
+    </p>
+  </section>
+
+  <!-- Who can take part — eligibility, in plain points. -->
+  <section class="mt-8">
+    <h3 class="text-xl font-semibold text-on-surface">Who can take part</h3>
+    <ul class="mt-3 space-y-2 text-lg text-on-surface-variant">
+      <li class="flex items-start gap-2">
+        <span class="material-symbols-outlined mt-0.5 text-[20px] text-primary">check_circle</span>
+        Adults aged 18–70
+      </li>
+      <li class="flex items-start gap-2">
+        <span class="material-symbols-outlined mt-0.5 text-[20px] text-primary">check_circle</span>
+        Diagnosed with Type 2 Diabetes for at least 6 months
+      </li>
+      <li class="flex items-start gap-2">
+        <span class="material-symbols-outlined mt-0.5 text-[20px] text-primary">check_circle</span>
+        Not currently pregnant or breastfeeding
+      </li>
+    </ul>
+    <p class="mt-3 text-sm text-on-surface-variant">
+      Not sure if you qualify? You can still apply — the study team will confirm your eligibility.
+    </p>
+  </section>
+
+  <!-- Apply call-to-action. In the React port this routes to the patient application form
+       for THIS trial. For a CLOSED trial, render the disabled variant shown below instead. -->
+  <section class="mt-10 rounded-xl border border-outline-variant bg-surface-container-lowest p-6 shadow-card">
+    <h3 class="text-lg font-semibold text-on-surface">Interested in joining?</h3>
+    <p class="mt-1 text-base text-on-surface-variant">
+      Applying takes a few minutes. Your details are shared only with the study team.
+    </p>
+    <a href="#" class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-card bg-primary px-6 py-3 text-base font-semibold text-on-primary transition-all hover:brightness-90 active:scale-[0.99] sm:w-auto">
+      Apply for this trial
+      <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+    </a>
+
+    <!-- CLOSED variant (for reference — swap in when status is closed):
+    <button disabled class="mt-4 inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-card bg-surface-container px-6 py-3 text-base font-semibold text-on-surface-variant sm:w-auto">
+      Enrolment closed
+    </button>
+    -->
+  </section>
+
+  <!-- Reassurance footer strip (matches the login page's "Secure connection" tone). -->
+  <div class="mt-8 flex items-center justify-center gap-2 text-on-surface-variant">
+    <span class="material-symbols-outlined text-[16px]">lock</span>
+    <p class="text-xs font-medium uppercase tracking-widest">Your information is kept private</p>
+  </div>
+
+</main>
+
+</body>
+</html>
